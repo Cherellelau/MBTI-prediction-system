@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set return_to = request.args.get('return_to') %}
+{% set back_to = request.args.get('back_to', 'explore') %}
+{% set result_id = request.args.get('result_id') %}
+
+<div style="margin:0 0 12px;">
+    {% if return_to %}
+    <a class="btn" href="{{ return_to }}">
+        ← {{ t('explore_back_to_results') }}
+    </a>
+    {% elif back_to == 'result_view' and result_id %}
+    <a class="btn" href="{{ url_for('result_view', result_id=result_id) }}">
+        ← {{ t('explore_back_to_results') }}
+    </a>
+    {% else %}
+    <a class="btn" href="{{ url_for('explore') }}">
+        ← {{ t('explore_back') }}
+    </a>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top:12px;padding:18px;border-radius:14px;border:1px solid #e6e6e6;">
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+        <img src="{{ url_for('static', filename='img/mbti/' ~ type_code ~ '.png') }}" alt="{{ type_code }}"
+            style="width:86px;height:86px;border-radius:16px;object-fit:cover;border:1px solid #ddd;"
+            onerror="this.style.display='none';" />
+        <div>
+            <h1 style="margin:0;">{{ type_code }}</h1>
+            <p style="margin:6px 0 0;opacity:.8;">{{ t('type_' ~ type_code ~ '_tagline') }}</p>
+        </div>
+    </div>
+
+    <hr style="margin:16px 0;opacity:.25;">
+
+    <h2 style="margin:0 0 8px;">{{ t('type_intro_title') }}</h2>
+    <p style="margin:0 0 14px;line-height:1.6;opacity:.9;">
+        {{ t('type_' ~ type_code ~ '_intro') }}
+    </p>
+
+    <h2 style="margin:0 0 8px;">{{ t('type_strength_title') }}</h2>
+    <ul style="margin-top:0;line-height:1.8;">
+        <li>{{ t('type_' ~ type_code ~ '_s1') }}</li>
+        <li>{{ t('type_' ~ type_code ~ '_s2') }}</li>
+        <li>{{ t('type_' ~ type_code ~ '_s3') }}</li>
+    </ul>
+
+    <h2 style="margin:0 0 8px;">{{ t('type_weakness_title') }}</h2>
+    <ul style="margin-top:0;line-height:1.8;">
+        <li>{{ t('type_' ~ type_code ~ '_w1') }}</li>
+        <li>{{ t('type_' ~ type_code ~ '_w2') }}</li>
+        <li>{{ t('type_' ~ type_code ~ '_w3') }}</li>
+    </ul>
+
+    {% if careers %}
+    <hr style="margin:16px 0;opacity:.25;">
+    <h2 style="margin:0 0 10px;">{{ t('career_title') }}</h2>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+        {% for c in careers %}
+        <div style="border:1px solid #eee;border-radius:12px;padding:12px;">
+            <div style="font-weight:700;">
+                <b>{{ (c.title or '').strip() or c.careerKey }}</b>
+            </div>
+            <div style="opacity:.8;margin:6px 0 10px;">
+                {{ c.description or "" }}
+            </div>
+            <a href="{{ c.url }}" target="_blank">{{ t('career_view_link') }}</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

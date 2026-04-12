@@ -1,0 +1,797 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .result-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding-bottom: 120px;
+  }
+
+  .result-hero {
+    margin-bottom: 18px;
+  }
+
+  .result-hero h1 {
+    margin-bottom: 8px;
+  }
+
+  .result-hero-sub {
+    color: #64748b;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .result-main-card {
+    border-radius: 24px;
+    padding: 26px;
+  }
+
+  .result-section {
+    margin-bottom: 26px;
+  }
+
+  .result-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .soft-panel {
+    border: 1px solid #dbeafe;
+    background: #eff6ff;
+    border-radius: 18px;
+    padding: 18px 20px;
+  }
+
+  .soft-panel-title {
+    font-weight: 800;
+    font-size: 20px;
+    margin-bottom: 8px;
+    color: #0f172a;
+  }
+
+  .soft-panel-sub {
+    color: #475569;
+    line-height: 1.7;
+    font-size: 14px;
+  }
+
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .mini-stat {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 14px;
+    background: #fff;
+  }
+
+  .mini-stat-label {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+  }
+
+  .mini-stat-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .mini-stat-sub {
+    margin-top: 4px;
+    color: #475569;
+    font-size: 13px;
+  }
+
+  .preview-box {
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 16px 18px;
+  }
+
+  .preview-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .result-divider {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 24px 0;
+  }
+
+  .guideline-box {
+    border: 1px solid #dbeafe;
+    background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+    border-radius: 18px;
+    padding: 18px 20px;
+  }
+
+  .guideline-box h3 {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .guideline-box ul {
+    margin: 0;
+    padding-left: 18px;
+    line-height: 1.8;
+  }
+
+  .guideline-box details {
+    margin-top: 10px;
+  }
+
+  .guideline-box summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: #2563eb;
+  }
+
+  .result-choice-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .result-choice-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  .result-choice-sub {
+    color: #64748b;
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .top3-list {
+    display: grid;
+    gap: 16px;
+    margin-top: 10px;
+  }
+
+  .top3-card {
+    position: relative;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    background: #fff;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .top3-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    transform: translateY(-1px);
+  }
+
+  .top3-card.selected {
+    border-color: #2563eb;
+    background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14), 0 10px 24px rgba(37, 99, 235, 0.08);
+  }
+
+  .top3-card.selected .top3-type {
+    color: #1d4ed8;
+  }
+
+  .top3-selected-badge {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    background: #dbeafe;
+    color: #1d4ed8;
+    z-index: 2;
+  }
+
+  .top3-card.selected .top3-selected-badge {
+    display: inline-flex;
+  }
+
+  .top3-card.top-match {
+    border-color: #bfdbfe;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  }
+
+  .top3-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 20px;
+  }
+
+  .top3-left {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .top3-topline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .top3-type {
+    font-size: 34px;
+    line-height: 1;
+    font-weight: 900;
+    color: #0b1f44;
+    letter-spacing: 0.02em;
+  }
+
+  .top3-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .top3-meta {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    color: #475569;
+    font-size: 15px;
+  }
+
+  .top3-confidence strong {
+    color: #0f172a;
+  }
+
+  .top3-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .top3-link {
+    text-decoration: none;
+    font-weight: 700;
+    color: #2563eb;
+    white-space: nowrap;
+  }
+
+  .top3-link:hover {
+    text-decoration: underline;
+  }
+
+  .top3-radio {
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .top3-card.selected .top3-radio {
+    accent-color: #2563eb;
+  }
+
+  .compare-note {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .selection-helper {
+    margin-top: 14px;
+    color: #64748b;
+    font-size: 15px;
+  }
+
+  .result-back-row {
+    margin-top: 16px;
+  }
+
+  .btn-secondary-soft {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    border-radius: 14px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #0f172a;
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .btn-secondary-soft:hover {
+    background: #f8fafc;
+  }
+
+  .sticky-action-bar {
+    position: sticky;
+    bottom: 16px;
+    z-index: 15;
+    margin-top: 26px;
+  }
+
+  .sticky-action-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    border-radius: 18px;
+    border: 1px solid #dbeafe;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  }
+
+  .sticky-left {
+    min-width: 220px;
+  }
+
+  .sticky-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .sticky-selected {
+    font-size: 18px;
+    font-weight: 900;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+
+  .sticky-empty {
+    color: #94a3b8;
+    font-weight: 700;
+  }
+
+  .sticky-right {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .sticky-right form {
+    margin: 0;
+  }
+
+  .sticky-right button,
+  .sticky-right .secondary {
+    min-width: 200px;
+  }
+
+  button[disabled],
+  .secondary[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .result-table-wrap {
+    margin-top: 14px;
+    overflow: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+  }
+
+  .result-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+  }
+
+  .result-table th,
+  .result-table td {
+    padding: 12px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .result-table thead tr {
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .result-table tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .result-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  @media (max-width: 860px) {
+    .mini-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .top3-inner {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .top3-right {
+      width: 100%;
+      justify-content: flex-start;
+      gap: 10px;
+    }
+
+    .top3-selected-badge {
+      top: 12px;
+      right: 14px;
+      font-size: 11px;
+      padding: 4px 9px;
+    }
+
+    .sticky-action-inner {
+      align-items: stretch;
+    }
+
+    .sticky-right {
+      width: 100%;
+    }
+
+    .sticky-right form,
+    .sticky-right button {
+      width: 100%;
+    }
+
+    .sticky-right button,
+    .sticky-right .secondary {
+      min-width: 0;
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .result-main-card {
+      padding: 18px;
+      border-radius: 18px;
+    }
+
+    .mini-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .top3-type {
+      font-size: 28px;
+    }
+  }
+</style>
+
+<div class="result-page">
+  <div class="result-hero">
+    <h1>{{ t("result_title") }}</h1>
+    <div class="result-hero-sub">
+      {{ t("result_guideline_3") }}
+    </div>
+  </div>
+
+  <div class="card result-main-card">
+
+    {% if pending.get("scenario_rows") %}
+    <div class="result-section">
+      <div class="soft-panel">
+        <div class="soft-panel-title">{{ t("scenario_preview_title") }}</div>
+        <div class="soft-panel-sub">{{ t("scenario_preview_sub") }}</div>
+
+        <div class="mini-grid">
+          <div class="mini-stat">
+            <div class="mini-stat-label">EI</div>
+            <div class="mini-stat-value">{{ pending.get("scenario_breakdown", {}).get("EI") }}</div>
+            <div class="mini-stat-sub">{{ pending.get("scenario_breakdown", {}).get("EI_side") }}</div>
+          </div>
+
+          <div class="mini-stat">
+            <div class="mini-stat-label">SN</div>
+            <div class="mini-stat-value">{{ pending.get("scenario_breakdown", {}).get("SN") }}</div>
+            <div class="mini-stat-sub">{{ pending.get("scenario_breakdown", {}).get("SN_side") }}</div>
+          </div>
+
+          <div class="mini-stat">
+            <div class="mini-stat-label">TF</div>
+            <div class="mini-stat-value">{{ pending.get("scenario_breakdown", {}).get("TF") }}</div>
+            <div class="mini-stat-sub">{{ pending.get("scenario_breakdown", {}).get("TF_side") }}</div>
+          </div>
+
+          <div class="mini-stat">
+            <div class="mini-stat-label">JP</div>
+            <div class="mini-stat-value">{{ pending.get("scenario_breakdown", {}).get("JP") }}</div>
+            <div class="mini-stat-sub">{{ pending.get("scenario_breakdown", {}).get("JP_side") }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-table-wrap">
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th style="width:70px;">Q</th>
+              <th>{{ t("scenario_question") }}</th>
+              <th style="width:280px;">{{ t("scenario_your_answer") }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in pending.get("scenario_rows", []) %}
+            <tr>
+              <td><strong>{{ r.get("num") }}</strong></td>
+              <td>{{ r.get("questionText") }}</td>
+              <td><strong>{{ r.get("letter") }}</strong> — {{ r.get("answerText") }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="result-divider">
+    {% elif pending.raw_text %}
+    <div class="result-section">
+      <div class="preview-box">
+        <div class="preview-label">Your Input Summary</div>
+        <div class="input-text" style="white-space:pre-wrap;">{{ pending.raw_text }}</div>
+      </div>
+    </div>
+
+    <hr class="result-divider">
+    {% endif %}
+
+    <div class="result-section">
+      <div class="guideline-box">
+        <h3>{{ t("result_guidelines_title") }}</h3>
+        <ul>
+          <li>{{ t("result_guideline_1") }}</li>
+          <li>{{ t("result_guideline_2") }}</li>
+          <li>{{ t("result_guideline_3") }}</li>
+          <li>{{ t("result_guideline_4") }}</li>
+        </ul>
+
+        <details>
+          <summary>{{ t("result_guideline_5") }}</summary>
+          <ul style="margin-top:10px;">
+            <li>{{ t("result_guideline_5") }}</li>
+            <li>{{ t("result_guideline_6") }}</li>
+            <li>{{ t("result_guideline_7") }}</li>
+            <li>{{ t("result_guideline_8") }}</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <div class="result-section">
+      <div class="result-choice-head">
+        <div>
+          <div class="result-choice-title">{{ t('result_choose_final_title') }}</div>
+          <div class="result-choice-sub">{{ t("msg_choose_one") }}</div>
+        </div>
+      </div>
+
+      <div id="chooseErr" class="alert" style="display:none; margin:12px 0;">
+        {{ t("msg_choose_one") }}
+      </div>
+
+      <div class="top3-list">
+        {% for item in pending.top3 %}
+        <div class="top3-card {% if loop.first %}top-match{% endif %}" data-type="{{ item.typeCode }}">
+          <span class="top3-selected-badge">{{ t('result_selected_badge') }}</span>
+
+          <div class="top3-inner">
+            <div class="top3-left">
+              <div class="top3-topline">
+                <div class="top3-type">{{ item.typeCode }}</div>
+                {% if loop.first %}
+                <span class="top3-badge">{{ t('result_top_match') }}</span>
+                {% endif %}
+              </div>
+
+              <div class="top3-meta">
+                <div class="top3-confidence">
+                  {{ t("result_confidence") }}: <strong>{{ (item.confidence * 100) | round(0) }}%</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="top3-right">
+              <a href="{{ url_for('type_detail',
+                            type_code=item.typeCode,
+                            back_to='result_page',
+                            return_to=url_for('result.result_page')) }}" class="top3-link">
+                {{ t('result_view_details') }}
+              </a>
+
+              <input class="top3-radio" type="radio" name="chosen_type_radio" value="{{ item.typeCode }}"
+                aria-label="Choose {{ item.typeCode }}">
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="compare-note">
+        {{ t('result_compare_note') }}
+      </div>
+
+      <div class="selection-helper" id="selectionHelper" data-default-text="{{ t('result_select_helper') }}"
+        data-selected-template="{{ t('result_selected_message') }}">
+        {{ t('result_select_helper') }}
+      </div>
+
+      <div class="result-back-row">
+        <a href="{{ url_for('test.scenario_preview') }}" class="btn-secondary-soft">
+          {{ t("result_back_preview") }}
+        </a>
+      </div>
+    </div>
+
+    <div class="sticky-action-bar">
+      <div class="sticky-action-inner">
+        <div class="sticky-left">
+          <div class="sticky-label">{{ t('result_selected_type') }}</div>
+          <div class="sticky-selected" id="selectedTypeText">
+            <span class="sticky-empty">{{ t('result_none_selected') }}</span>
+          </div>
+        </div>
+
+        <div class="sticky-right">
+          <form method="POST" action="{{ url_for('result.confirm_result') }}" id="resultConfirmForm">
+            <input type="hidden" name="chosen_type" id="chosenTypeConfirm">
+            <button type="submit" id="confirmBtn" disabled>
+              {{ t("result_confirm_save") }}
+            </button>
+          </form>
+
+          <form method="POST" action="{{ url_for('result.send_result_email_pdf') }}" id="resultPdfForm">
+            <input type="hidden" name="chosen_type" id="chosenTypePdf">
+            <button type="submit" class="secondary" id="pdfBtn" disabled>
+              {{ t('result_send_pdf_short') }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const err = document.getElementById("chooseErr");
+    const cards = document.querySelectorAll(".top3-card");
+    const radios = document.querySelectorAll('input[name="chosen_type_radio"]');
+
+    const hiddenConfirm = document.getElementById("chosenTypeConfirm");
+    const hiddenPdf = document.getElementById("chosenTypePdf");
+
+    const confirmForm = document.getElementById("resultConfirmForm");
+    const pdfForm = document.getElementById("resultPdfForm");
+
+    const confirmBtn = document.getElementById("confirmBtn");
+    const pdfBtn = document.getElementById("pdfBtn");
+    const selectedTypeText = document.getElementById("selectedTypeText");
+    const selectionHelper = document.getElementById("selectionHelper");
+
+    const defaultHelperText = selectionHelper.dataset.defaultText;
+    const selectedTemplate = selectionHelper.dataset.selectedTemplate;
+    const noneSelectedText = "{{ t('result_none_selected') }}";
+
+    function getChosen() {
+      const chosen = document.querySelector('input[name="chosen_type_radio"]:checked');
+      return chosen ? chosen.value : "";
+    }
+
+    function syncHidden() {
+      const v = getChosen();
+      hiddenConfirm.value = v;
+      hiddenPdf.value = v;
+    }
+
+    function updateCardState() {
+      const chosen = getChosen();
+
+      cards.forEach(card => {
+        const type = card.getAttribute("data-type");
+        card.classList.toggle("selected", type === chosen);
+      });
+
+      if (chosen) {
+        selectedTypeText.textContent = chosen;
+        selectionHelper.textContent = selectedTemplate.replace("{type}", chosen);
+        confirmBtn.disabled = false;
+        pdfBtn.disabled = false;
+      } else {
+        selectedTypeText.innerHTML = `<span class="sticky-empty">${noneSelectedText}</span>`;
+        selectionHelper.textContent = defaultHelperText;
+        confirmBtn.disabled = true;
+        pdfBtn.disabled = true;
+      }
+    }
+
+    function syncAll() {
+      syncHidden();
+      updateCardState();
+    }
+
+    function requireChoice(e) {
+      syncAll();
+      const v = getChosen();
+
+      if (!v) {
+        e.preventDefault();
+        err.style.display = "block";
+        err.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else {
+        err.style.display = "none";
+      }
+    }
+
+    cards.forEach(card => {
+      card.addEventListener("click", (e) => {
+        const isLink = e.target.closest(".top3-link");
+        if (isLink) return;
+
+        const radio = card.querySelector('input[name="chosen_type_radio"]');
+        if (radio) {
+          radio.checked = true;
+          err.style.display = "none";
+          syncAll();
+        }
+      });
+    });
+
+    radios.forEach(radio => {
+      radio.addEventListener("change", () => {
+        err.style.display = "none";
+        syncAll();
+      });
+    });
+
+    confirmForm.addEventListener("submit", requireChoice);
+    pdfForm.addEventListener("submit", requireChoice);
+
+    syncAll();
+  });
+</script>
+
+{% endblock %}

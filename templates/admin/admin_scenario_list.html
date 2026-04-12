@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set CAT_LABEL = {
+"EI": "Extraversion (E) / Introversion (I)",
+"SN": "Sensing (S) / Intuition (N)",
+"TF": "Thinking (T) / Feeling (F)",
+"JP": "Judging (J) / Perceiving (P)"
+} %}
+
+<h1>Scenario Based Questions</h1>
+
+<p class="small muted">
+  Manage scenario-based MBTI questions by language and category. Use <b>Edit</b> to update question text and options, or
+  <b>+ New Question</b> to add a new one.
+</p>
+
+<p>
+  <a href="{{ url_for('admin.scenario_new') }}">+ New Question</a>
+</p>
+
+<table border="1" cellpadding="8" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Lang</th>
+    <th>Category</th>
+    <th>Scenario Questions</th>
+    <th>Actions</th>
+  </tr>
+
+  {% for q in questions %}
+  <tr>
+    <td>{{ q["questionID"] }}</td>
+    <td>{{ q["language"] }}</td>
+    <td>{{ CAT_LABEL.get(q["category"], q["category"]) }}</td>
+    <td>{{ q["scenarioText"] }}</td>
+    <td>
+      <a href="{{ url_for('admin.scenario_edit', qid=q['questionID']) }}">Edit</a>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

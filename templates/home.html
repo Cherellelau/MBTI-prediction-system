@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="home-wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div>
+      <h1 style="margin:0;">
+        {{ t('home_welcome') }}
+        {% if session.get('name') %}, {{ session.get('name') }}{% endif %}
+      </h1>
+      <p style="margin:6px 0 0;opacity:0.85;">
+        {{ t('home_subtitle') }}
+      </p>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    </div>
+  </div>
+
+  <hr style="margin:18px 0;opacity:0.2;">
+
+  <div class="home-grid">
+    <div class="card interactive-card">
+      <h3 style="margin-top:0;">{{ t('home_what_mbti_title') }}</h3>
+      <p style="opacity:0.9;line-height:1.5;">
+        {{ t('home_what_mbti_desc_1') }}
+        <strong>E/I</strong> {{ t('home_dim_energy') }},
+        <strong>S/N</strong> {{ t('home_dim_info') }},
+        <strong>T/F</strong> {{ t('home_dim_decision') }},
+        <strong>J/P</strong> {{ t('home_dim_lifestyle') }}.
+      </p>
+
+      <details style="margin-top:10px;">
+        <summary style="cursor:pointer;">{{ t('home_see_dimensions') }}</summary>
+        <ul style="margin-top:8px;line-height:1.6;">
+          <li><b>E vs I</b>: {{ t('home_dim_ei') }}</li>
+          <li><b>S vs N</b>: {{ t('home_dim_sn') }}</li>
+          <li><b>T vs F</b>: {{ t('home_dim_tf') }}</li>
+          <li><b>J vs P</b>: {{ t('home_dim_jp') }}</li>
+        </ul>
+      </details>
+    </div>
+
+    <div class="card interactive-card">
+      <h3 style="margin-top:0;">{{ t('home_how_title') }}</h3>
+      <ol style="line-height:1.7;">
+        <li>{{ t('home_how_1') }}</li>
+        <li>{{ t('home_how_2') }}</li>
+        <li>{{ t('home_how_3') }}</li>
+        <li>{{ t('home_how_4') }}</li>
+      </ol>
+    </div>
+
+    <div class="card interactive-card latest-card">
+      <h3 style="margin-top:0;">{{ t('home_latest_title') }}</h3>
+
+      {% if latest %}
+      <p style="opacity:0.9; margin-bottom:8px;">
+        <b>{{ t('home_latest_type') }}:</b>
+        <span class="type-badge">{{ latest["typeCode"] }}</span>
+      </p>
+
+      <p style="opacity:0.9; margin:0 0 8px 0;">
+        <b>{{ t('home_latest_conf') }}:</b>
+        {{ latest["confidenceScore"] }}
+      </p>
+
+      <div class="confidence-wrap">
+        <div class="confidence-bar-bg">
+          <div class="confidence-bar-fill" data-width="{{ ((latest['confidenceScore']|float) * 100) | round(0) }}%">
+          </div>
+        </div>
+      </div>
+
+      <p style="opacity:0.9; margin-top:0;">
+        <b>{{ t('home_latest_date') }}:</b> {{ latest["createdAt"] }}
+      </p>
+
+      <a href="{{ url_for('timeline.timeline', highlight=latest['resultID']) }}" class="timeline-link">
+        {{ t('home_view_in_timeline') }} →
+      </a>
+      {% else %}
+      <p style="opacity:0.9;">{{ t('home_no_results') }}</p>
+      <a href="{{ url_for('test.test') }}" class="timeline-link">
+        {{ t('home_start_now') }} →
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <hr style="margin:18px 0;opacity:0.2;">
+
+  <div class="card interactive-card">
+    <h3 style="margin-top:0;">{{ t('home_quick_start_title') }}</h3>
+    <p style="opacity:0.9;margin-bottom:14px;">
+      {{ t('home_quick_start_desc') }}
+    </p>
+
+    <div class="quick-btn-row">
+      <button onclick="goTest('text')" class="quick-action-btn primary">
+        {{ t('home_quick_text_btn') }}
+      </button>
+      <button onclick="goTest('scenario')" class="quick-action-btn secondary">
+        {{ t('home_quick_scenario_btn') }}
+      </button>
+    </div>
+  </div>
+
+  <div id="explore" class="card interactive-card explore-card">
+    <h2 style="margin:0 0 8px 0;">{{ t('home_explore_title') }}</h2>
+
+    <p class="muted" style="margin:0 0 14px 0; opacity:0.85;">
+      {{ t('home_explore_desc') }}
+    </p>
+
+    <a class="btn btn-primary" href="{{ url_for('explore', from='home_explore') }}">
+      {{ t('home_explore_now') }}
+    </a>
+  </div>
+
+  <p id="tip" style="margin-top:12px;opacity:0.85;"></p>
+</div>
+
+<div id="home-data" data-tip-text="{{ t('home_tip_text')|e }}" data-tip-scenario="{{ t('home_tip_scenario')|e }}"
+  data-url-text="{{ url_for('test.test') }}" data-url-scenario="{{ url_for('test.scenario_start') }}">
+</div>
+
+<script>
+  function goTest(mode) {
+    const data = document.getElementById("home-data");
+    const tip = document.getElementById("tip");
+
+    const TIP_TEXT = data.dataset.tipText;
+    const TIP_SCENARIO = data.dataset.tipScenario;
+    const URL_TEXT = data.dataset.urlText;
+    const URL_SCENARIO = data.dataset.urlScenario;
+
+    if (mode === "text") {
+      tip.textContent = TIP_TEXT;
+      setTimeout(() => window.location.href = URL_TEXT, 600);
+    } else {
+      tip.textContent = TIP_SCENARIO;
+      setTimeout(() => window.location.href = URL_SCENARIO, 600);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const bars = document.querySelectorAll(".confidence-bar-fill");
+    bars.forEach((bar) => {
+      const targetWidth = bar.dataset.width || "0%";
+      setTimeout(() => {
+        bar.style.width = targetWidth;
+      }, 200);
+    });
+  });
+</script>
+
+{% endblock %}

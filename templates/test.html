@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/voice.css') }}">
+{% endblock %}
+
+<div class="test-page">
+  <div class="test-header-row">
+    <div>
+      <h1 class="test-title">{{ t('test_title') }}</h1>
+      <p class="test-sub">{{ t('test_sub') }}</p>
+    </div>
+
+    <div class="status-pill" id="statusPill">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">{{ t('test_ready') }}</span>
+    </div>
+  </div>
+
+  <div class="progress-card">
+    <div class="progress-top">
+      <strong>{{ t('test_quick_guide') }}</strong>
+      <span class="small" id="guideText">{{ t('test_pick_method') }}</span>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="progress-steps">
+      <span class="step" id="step1">{{ t('test_step1') }}</span>
+      <span class="step" id="step2">{{ t('test_step2') }}</span>
+      <span class="step" id="step3">{{ t('test_step3') }}</span>
+      <span class="step" id="step4">{{ t('test_step4') }}</span>
+    </div>
+  </div>
+
+  <!-- Scenario Card -->
+  <div class="card interactive">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">{{ t('test_scenario_title') }}</h2>
+        <p class="muted">{{ t('test_scenario_desc') }}</p>
+      </div>
+    </div>
+
+    <div class="card-actions">
+      <a class="btn primary" href="{{ url_for('test.scenario_start') }}" id="scenarioBtn">
+        {{ t('test_start_scenario') }}
+      </a>
+    </div>
+
+    <div class="collapsible" id="scenarioInfo">
+      <ul>
+        <li>{{ t('test_scenario_li1') }}</li>
+        <li>{{ t('test_scenario_li2') }}</li>
+        <li>{{ t('test_scenario_li3') }}</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Voice Card -->
+  <div class="card interactive">
+    <div class="card-head">
+      <div>
+        <h2 class="card-title">{{ t('test_voice_title') }}</h2>
+        <p class="muted">{{ t('test_voice_desc') }}</p>
+      </div>
+    </div>
+
+    <div id="transcribeWarning"></div>
+
+    <div class="voice-row">
+      <div class="voice-left">
+
+        <!-- Voice Quick Guide -->
+        <div class="voice-guide-box" id="voiceGuideBox">
+          <div class="voice-guide-header">
+            <span>✨ {{ t('test_voice_quick_guide') }}</span>
+            <button type="button" class="voice-guide-toggle" id="voiceGuideToggle">
+              {{ t('test_hide_guide') }}
+            </button>
+          </div>
+
+          <div class="voice-guide-body" id="voiceGuideBody">
+            <p class="voice-guide-intro">{{ t('test_voice_guide_intro') }}</p>
+
+            <div class="voice-guide-steps">
+              <div class="voice-guide-step">
+                <span class="guide-step-badge">1</span>
+                <span>{{ t('test_voice_guide_step1') }}</span>
+              </div>
+
+              <div class="voice-guide-step">
+                <span class="guide-step-badge">2</span>
+                <span>{{ t('test_voice_guide_step2') }}</span>
+              </div>
+
+              <div class="voice-guide-step">
+                <span class="guide-step-badge">3</span>
+                <span>{{ t('test_voice_guide_step3') }}</span>
+              </div>
+
+              <div class="voice-guide-step">
+                <span class="guide-step-badge">4</span>
+                <span>{{ t('test_voice_guide_step4') }}</span>
+              </div>
+
+              <div class="voice-guide-step">
+                <span class="guide-step-badge">5</span>
+                <span>{{ t('test_voice_guide_step5') }}</span>
+              </div>
+            </div>
+
+            <div class="voice-guide-tip">
+              💡 {{ t('test_voice_guide_tip') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Language selector -->
+        <div class="voice-lang-select" style="margin-bottom:12px;">
+          <label for="voiceLang" class="small strong">
+            {{ t('test_voice_language') }}
+          </label>
+          <select id="voiceLang" class="voice-select" style="margin-top:6px;">
+            <option value="en">{{ t('lang_en') }}</option>
+            <option value="zh">{{ t('lang_zh') }}</option>
+            <option value="ms">{{ t('lang_bm') }}</option>
+          </select>
+        </div>
+
+        <div class="voice-buttons">
+
+          <!-- RECORD FIRST -->
+          <div class="control-row">
+            <button class="btn primary" type="button" id="btnStart">{{ t('test_start_recording') }}</button>
+            <button class="btn danger" type="button" id="btnStop" disabled>{{ t('test_stop') }}</button>
+            <button class="btn" type="button" id="btnTranscribe" disabled>{{ t('test_transcribe') }}</button>
+          </div>
+
+          <div class="voice-meta">
+            <div class="timer">⏱ <span id="timerText">00:00</span></div>
+            <div class="small muted" id="voiceLangHint">
+              {{ t('test_voice_select_lang_hint') }}
+            </div>
+          </div>
+
+          <!-- THEN OR UPLOAD -->
+          <div class="upload-row" style="margin-top:12px;">
+            <label class="small strong">{{ t('test_or_upload_audio') }}</label><br>
+
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+              <label class="btn" style="margin:0;">
+                {{ t('choose_file') }}
+                <input type="file" id="audioFile" accept="audio/*" style="display:none;">
+              </label>
+
+              <span id="fileNameText" class="muted small">{{ t('no_file_chosen') }}</span>
+
+              <button class="btn" type="button" id="btnUploadFile">{{ t('test_upload_btn') }}</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="voice-right">
+        <label class="small strong">
+          {{ t('test_voice_used_language') }}:
+          <span id="detectedLang">-</span>
+        </label>
+
+        <label class="small strong" style="margin-top:10px;">
+          {{ t('test_transcript_original') }}
+        </label>
+        <textarea id="transcriptBox" class="voice-textarea"
+          placeholder="{{ t('test_transcript_original_ph') }}"></textarea>
+
+        <label class="small strong" style="margin-top:10px;">
+          {{ t('test_transcript_en') }}
+        </label>
+        <textarea id="transcriptEnBox" class="voice-textarea" placeholder="{{ t('test_transcript_en_ph') }}"
+          readonly></textarea>
+
+        <form method="POST" action="{{ url_for('voice.voice_submit') }}" class="submit-form">
+          <input type="hidden" name="transcript" id="transcriptHidden" />
+          <input type="hidden" name="detected_lang" id="detectedLangHidden" />
+          <button class="btn success" type="submit" id="btnSubmit">
+            {{ t('test_submit_predict') }}
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.VOICE_UPLOAD_URL = "{{ url_for('voice.voice_upload') }}";
+  window.VOICE_TRANSCRIBE_URL = "{{ url_for('voice.voice_transcribe') }}";
+</script>
+
+<script src="{{ url_for('static', filename='js/voice.js') }}" defer></script>
+
+<script>
+  window.I18N_VOICE_SELECT_LANG_HINT = "{{ t('test_voice_select_lang_hint') if t('test_voice_select_lang_hint') != 'test_voice_select_lang_hint' else 'Select the spoken language before transcription. If the result looks wrong, switch language and retry.' }}";
+  window.I18N_VOICE_UPLOAD_PROMPT = "{{ t('test_choose_file_first') }}";
+  window.I18N_VOICE_UPLOADING = "{{ t('test_uploading') }}";
+  window.I18N_VOICE_UPLOAD_HINT = "{{ t('test_uploading_hint') }}";
+  window.I18N_VOICE_UPLOAD_FAIL = "{{ t('test_upload_failed') }}";
+  window.I18N_VOICE_UPLOADED_HINT = "{{ t('test_uploaded_click_transcribe') }}";
+  window.I18N_NO_FILE_CHOSEN = "{{ t('no_file_chosen') }}";
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const toggleBtn = document.getElementById("voiceGuideToggle");
+    const guideBody = document.getElementById("voiceGuideBody");
+
+    if (toggleBtn && guideBody) {
+      toggleBtn.addEventListener("click", function () {
+        const isHidden = guideBody.style.display === "none";
+        guideBody.style.display = isHidden ? "block" : "none";
+        toggleBtn.textContent = isHidden
+          ? "{{ t('test_hide_guide') }}"
+          : "{{ t('test_show_guide') }}";
+      });
+    }
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:1100px;margin:0 auto;">
+
+    <div style="margin:0 0 12px;">
+        <!-- back target decided by query param -->
+        <button class="btn" type="button" id="btnBackExplore" data-home-url="{{ url_for('home') }}"
+            data-from="{{ request.args.get('from','') }}">
+            ← {{ t('back_btn') }}
+        </button>
+    </div>
+
+    <h1 style="margin:0 0 6px;">{{ t('explore_title') }}</h1>
+    <p style="margin:0 0 18px;opacity:.85;">{{ t('explore_subtitle') }}</p>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+        {% for code in types %}
+        <a href="{{ url_for('type_detail', type_code=code, from=request.args.get('from','')) }}"
+            style="text-decoration:none;color:inherit;">
+            <div class="card" style="border-radius:14px;padding:14px;height:100%;border:1px solid #e6e6e6;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <img src="{{ url_for('static', filename='img/mbti/' ~ code ~ '.png') }}" alt="{{ code }}"
+                        style="width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid #ddd;"
+                        onerror="this.style.display='none';" />
+                    <div>
+                        <div style="font-weight:700;font-size:18px;">{{ code }}</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:10px;opacity:.85;font-size:14px;">
+                    {{ t('type_' ~ code ~ '_tagline') }}
+                </div>
+
+                <div style="margin-top:12px;color:#4f46e5;font-weight:600;">
+                    {{ t('explore_view_more') }} →
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    (function () {
+        const btn = document.getElementById("btnBackExplore");
+        if (!btn) return;
+
+        const homeUrl = btn.dataset.homeUrl;
+        const from = (btn.dataset.from || "").toLowerCase();
+
+        btn.addEventListener("click", () => {
+            // ✅ Only if user came from Home "Explore Now" button
+            if (from === "home_explore") {
+                window.location.href = homeUrl + "#explore";
+            } else {
+                window.location.href = homeUrl;
+            }
+        });
+    })();
+</script>
+
+{% endblock %}

@@ -1,0 +1,969 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .field-error {
+        color: #dc2626;
+        font-size: 13px;
+        margin-top: 6px;
+        display: none;
+    }
+
+    .input.is-invalid {
+        border: 1px solid #dc2626 !important;
+        background: #fef2f2;
+    }
+
+    .input.is-valid {
+        border: 1px solid #16a34a !important;
+    }
+
+    .tooltip-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+    }
+
+    .tooltip-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #5f6368;
+        color: #fff;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        line-height: 1;
+        user-select: none;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+        transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .tooltip-icon:hover,
+    .tooltip-icon:focus {
+        background: #4b5563;
+        transform: scale(1.05);
+    }
+
+    .tooltip-box {
+        position: absolute;
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-left: 10px;
+        width: 260px;
+        background: #111827;
+        color: #ffffff;
+        font-size: 12px;
+        line-height: 1.5;
+        padding: 10px 12px;
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.18s ease, visibility 0.18s ease;
+        z-index: 20;
+    }
+
+    .tooltip-wrap:hover .tooltip-box,
+    .tooltip-wrap:focus-within .tooltip-box {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    @media (max-width: 768px) {
+        .confirm-profile-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+</style>
+
+<div id="profile-msgs" hidden data-age-range="{{ t('profile_err_age_range') }}"
+    data-education-level="{{ t('profile_err_education_level') }}"
+    data-field-of-study="{{ t('profile_err_field_of_study') }}"
+    data-field-of-study-other-required="{{ t('profile_err_field_of_study_other_required') }}"
+    data-field-of-study-other-invalid="{{ t('profile_err_field_of_study_other_invalid') }}"
+    data-current-occupation-optional="{{ t('profile_err_current_occupation_optional') }}"
+    data-current-occupation-other-required="{{ t('profile_err_current_occupation_other_required') }}"
+    data-current-occupation-other-invalid="{{ t('profile_err_current_occupation_other_invalid') }}"
+    data-skills="{{ t('profile_err_skills') }}" data-interests="{{ t('profile_err_interests') }}"
+    data-interests-required="{{ t('profile_err_interests_required') }}"
+    data-work-style="{{ t('profile_err_work_style') }}" data-career-goal="{{ t('profile_err_career_goal') }}">
+</div>
+
+<div class="card" style="max-width: 900px; margin: 24px auto;">
+    <h1>{{ t("confirm_profile_title") }}</h1>
+    <p style="color:#6b7280;">
+        {{ t("confirm_profile_subtitle") }}
+    </p>
+
+    <form method="POST" action="{{ url_for('profile.confirm_resume_profile_post') }}" id="confirmProfileForm"
+        novalidate>
+        <div class="confirm-profile-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+            <div>
+                <label for="age_range">{{ t("profile_age_range") }}</label>
+                <select name="age_range" id="age_range" required
+                    class="input {% if invalid_fields and 'age_range' in invalid_fields %}is-invalid{% endif %}">
+                    <option value="">{{ t("profile_select_age_range") }}</option>
+                    <option value="18-20" {% if profile and profile['age_range']=='18-20' %}selected{% endif %}>18-20
+                    </option>
+                    <option value="21-25" {% if profile and profile['age_range']=='21-25' %}selected{% endif %}>21-25
+                    </option>
+                    <option value="26-30" {% if profile and profile['age_range']=='26-30' %}selected{% endif %}>26-30
+                    </option>
+                    <option value="31-35" {% if profile and profile['age_range']=='31-35' %}selected{% endif %}>31-35
+                    </option>
+                    <option value="36-40" {% if profile and profile['age_range']=='36-40' %}selected{% endif %}>36-40
+                    </option>
+                    <option value="41-45" {% if profile and profile['age_range']=='41-45' %}selected{% endif %}>41-45
+                    </option>
+                    <option value="46-50" {% if profile and profile['age_range']=='46-50' %}selected{% endif %}>46-50
+                    </option>
+                    <option value="51-55" {% if profile and profile['age_range']=='51-55' %}selected{% endif %}>51-55
+                    </option>
+                    <option value="56-60" {% if profile and profile['age_range']=='56-60' %}selected{% endif %}>56-60
+                    </option>
+                    <option value="61-65" {% if profile and profile['age_range']=='61-65' %}selected{% endif %}>61-65
+                    </option>
+                    <option value="66-70" {% if profile and profile['age_range']=='66-70' %}selected{% endif %}>66-70
+                    </option>
+                    <option value="71-75" {% if profile and profile['age_range']=='71-75' %}selected{% endif %}>71-75
+                    </option>
+                    <option value="76-80" {% if profile and profile['age_range']=='76-80' %}selected{% endif %}>76-80
+                    </option>
+                </select>
+                <div class="field-error" id="age_range_error" {% if invalid_fields and 'age_range' in invalid_fields
+                    %}style="display:block;" {% endif %}>
+                    {{ t("profile_err_age_range") }}
+                </div>
+            </div>
+
+            <div>
+                <label for="education_level">{{ t("profile_education_level") }}</label>
+                <select name="education_level" id="education_level" required
+                    class="input {% if invalid_fields and 'education_level' in invalid_fields %}is-invalid{% endif %}">
+                    <option value="">{{ t("profile_select_education_level") }}</option>
+                    <option value="Foundation" {% if profile and profile['education_level']=='Foundation' %}selected{%
+                        endif %}>{{ t("profile_edu_foundation") }}</option>
+                    <option value="Diploma" {% if profile and profile['education_level']=='Diploma' %}selected{% endif
+                        %}>{{ t("profile_edu_diploma") }}</option>
+                    <option value="Degree" {% if profile and profile['education_level']=='Degree' %}selected{% endif %}>
+                        {{ t("profile_edu_degree") }}</option>
+                    <option value="Master" {% if profile and profile['education_level']=='Master' %}selected{% endif %}>
+                        {{ t("profile_edu_master") }}</option>
+                    <option value="PhD" {% if profile and profile['education_level']=='PhD' %}selected{% endif %}>{{
+                        t("profile_edu_phd") }}</option>
+                </select>
+                <div class="field-error" id="education_level_error" {% if invalid_fields and 'education_level' in
+                    invalid_fields %}style="display:block;" {% endif %}>
+                    {{ t("profile_err_education_level") }}
+                </div>
+            </div>
+
+            <div>
+                <label for="field_of_study">{{ t("profile_field_of_study") }}</label>
+                <select name="field_of_study" id="field_of_study"
+                    class="input {% if invalid_fields and 'field_of_study' in invalid_fields %}is-invalid{% endif %}"
+                    required>
+                    <option value="">{{ t("profile_select_field_of_study") }}</option>
+                    <option value="Computer Science" {% if profile and profile['field_of_study']=='Computer Science'
+                        %}selected{% endif %}>{{ t("profile_field_computer_science") }}</option>
+                    <option value="Software Engineering" {% if profile and
+                        profile['field_of_study']=='Software Engineering' %}selected{% endif %}>{{
+                        t("profile_field_software_engineering") }}</option>
+                    <option value="Data Science" {% if profile and profile['field_of_study']=='Data Science'
+                        %}selected{% endif %}>{{ t("profile_field_data_science") }}</option>
+                    <option value="Information Technology" {% if profile and
+                        profile['field_of_study']=='Information Technology' %}selected{% endif %}>{{
+                        t("profile_field_information_technology") }}</option>
+                    <option value="Business" {% if profile and profile['field_of_study']=='Business' %}selected{% endif
+                        %}>{{ t("profile_field_business") }}</option>
+                    <option value="Marketing" {% if profile and profile['field_of_study']=='Marketing' %}selected{%
+                        endif %}>{{ t("profile_field_marketing") }}</option>
+                    <option value="Finance" {% if profile and profile['field_of_study']=='Finance' %}selected{% endif
+                        %}>{{ t("profile_field_finance") }}</option>
+                    <option value="Accounting" {% if profile and profile['field_of_study']=='Accounting' %}selected{%
+                        endif %}>{{ t("profile_field_accounting") }}</option>
+                    <option value="Engineering" {% if profile and profile['field_of_study']=='Engineering' %}selected{%
+                        endif %}>{{ t("profile_field_engineering") }}</option>
+                    <option value="Psychology" {% if profile and profile['field_of_study']=='Psychology' %}selected{%
+                        endif %}>{{ t("profile_field_psychology") }}</option>
+                    <option value="Design" {% if profile and profile['field_of_study']=='Design' %}selected{% endif %}>
+                        {{ t("profile_field_design") }}</option>
+                    <option value="Education" {% if profile and profile['field_of_study']=='Education' %}selected{%
+                        endif %}>{{ t("profile_field_education") }}</option>
+                    <option value="Other" {% if profile and profile['field_of_study'] not in ['', 'Computer Science'
+                        , 'Software Engineering' , 'Data Science' , 'Information Technology' , 'Business' , 'Marketing'
+                        , 'Finance' , 'Accounting' , 'Engineering' , 'Psychology' , 'Design' , 'Education' ]
+                        %}selected{% endif %}>{{ t("profile_other_option") }}</option>
+                </select>
+                <div class="field-error" id="field_of_study_error" {% if invalid_fields and 'field_of_study' in
+                    invalid_fields %}style="display:block;" {% endif %}>
+                    {{ t("profile_err_field_of_study") }}
+                </div>
+
+                <div id="field_of_study_other_wrap" style="display:none; margin-top:10px;">
+                    <input type="text" name="field_of_study_other" id="field_of_study_other"
+                        class="input {% if invalid_fields and 'field_of_study' in invalid_fields %}is-invalid{% endif %}"
+                        maxlength="100"
+                        value="{% if profile and profile['field_of_study'] not in ['', 'Computer Science', 'Software Engineering', 'Data Science', 'Information Technology', 'Business', 'Marketing', 'Finance', 'Accounting', 'Engineering', 'Psychology', 'Design', 'Education'] %}{{ profile['field_of_study'] }}{% elif profile and profile['field_of_study_other'] %}{{ profile['field_of_study_other'] }}{% endif %}"
+                        placeholder="{{ t('profile_enter_field_of_study_other') }}">
+                    <div class="field-error" id="field_of_study_other_error" {% if invalid_fields and 'field_of_study'
+                        in invalid_fields %}style="display:block;" {% endif %}>
+                        {{ t("profile_err_field_of_study_other_invalid") }}
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label for="current_occupation">{{ t("profile_current_occupation") }}</label>
+                <select name="current_occupation" id="current_occupation"
+                    class="input {% if invalid_fields and 'current_occupation' in invalid_fields %}is-invalid{% endif %}">
+                    <option value="">{{ t("profile_select_current_occupation") }}</option>
+                    <option value="Student" {% if profile and profile['current_occupation']=='Student' %}selected{%
+                        endif %}>{{ t("profile_occupation_student") }}</option>
+                    <option value="Intern" {% if profile and profile['current_occupation']=='Intern' %}selected{% endif
+                        %}>{{ t("profile_occupation_intern") }}</option>
+                    <option value="Software Developer" {% if profile and
+                        profile['current_occupation']=='Software Developer' %}selected{% endif %}>{{
+                        t("profile_occupation_software_developer") }}</option>
+                    <option value="Data Analyst" {% if profile and profile['current_occupation']=='Data Analyst'
+                        %}selected{% endif %}>{{ t("profile_occupation_data_analyst") }}</option>
+                    <option value="UI/UX Designer" {% if profile and profile['current_occupation']=='UI/UX Designer'
+                        %}selected{% endif %}>{{ t("profile_occupation_uiux_designer") }}</option>
+                    <option value="Research Assistant" {% if profile and
+                        profile['current_occupation']=='Research Assistant' %}selected{% endif %}>{{
+                        t("profile_occupation_research_assistant") }}</option>
+                    <option value="Business Analyst" {% if profile and profile['current_occupation']=='Business Analyst'
+                        %}selected{% endif %}>{{ t("profile_occupation_business_analyst") }}</option>
+                    <option value="Teacher" {% if profile and profile['current_occupation']=='Teacher' %}selected{%
+                        endif %}>{{ t("profile_occupation_teacher") }}</option>
+                    <option value="Freelancer" {% if profile and profile['current_occupation']=='Freelancer'
+                        %}selected{% endif %}>{{ t("profile_occupation_freelancer") }}</option>
+                    <option value="Unemployed" {% if profile and profile['current_occupation']=='Unemployed'
+                        %}selected{% endif %}>{{ t("profile_occupation_unemployed") }}</option>
+                    <option value="Other" {% if profile and profile['current_occupation'] not in ['', 'Student'
+                        , 'Intern' , 'Software Developer' , 'Data Analyst' , 'UI/UX Designer' , 'Research Assistant'
+                        , 'Business Analyst' , 'Teacher' , 'Freelancer' , 'Unemployed' ] %}selected{% endif %}>{{
+                        t("profile_other_option") }}</option>
+                </select>
+                <div class="field-error" id="current_occupation_error" {% if invalid_fields and 'current_occupation' in
+                    invalid_fields %}style="display:block;" {% endif %}>
+                    {{ t("profile_err_current_occupation_optional") }}
+                </div>
+
+                <div id="current_occupation_other_wrap" style="display:none; margin-top:10px;">
+                    <input type="text" name="current_occupation_other" id="current_occupation_other"
+                        class="input {% if invalid_fields and 'current_occupation' in invalid_fields %}is-invalid{% endif %}"
+                        maxlength="100"
+                        value="{% if profile and profile['current_occupation'] not in ['', 'Student', 'Intern', 'Software Developer', 'Data Analyst', 'UI/UX Designer', 'Research Assistant', 'Business Analyst', 'Teacher', 'Freelancer', 'Unemployed'] %}{{ profile['current_occupation'] }}{% elif profile and profile['current_occupation_other'] %}{{ profile['current_occupation_other'] }}{% endif %}"
+                        placeholder="{{ t('profile_enter_current_occupation_other') }}">
+                    <div class="field-error" id="current_occupation_other_error" {% if invalid_fields
+                        and 'current_occupation' in invalid_fields %}style="display:block;" {% endif %}>
+                        {{ t("profile_err_current_occupation_other_invalid") }}
+                    </div>
+                </div>
+            </div>
+
+            <div style="grid-column:1 / -1;">
+                <label for="skills">
+                    <span class="tooltip-wrap">
+                        <span>{{ t("profile_skills") }}</span>
+                        <span class="tooltip-icon" tabindex="0">?</span>
+                        <span class="tooltip-box">{{ t("profile_skills_hint") }}</span>
+                    </span>
+                </label>
+                <textarea name="skills" id="skills"
+                    class="input {% if invalid_fields and 'skills' in invalid_fields %}is-invalid{% endif %}" rows="3"
+                    maxlength="500"
+                    placeholder="{{ t('profile_skills_placeholder') }}">{{ profile['skills'] if profile else '' }}</textarea>
+                <div class="field-error" id="skills_error" {% if invalid_fields and 'skills' in invalid_fields
+                    %}style="display:block;" {% endif %}>
+                    {{ t("profile_err_skills") }}
+                </div>
+            </div>
+
+            <div style="grid-column:1 / -1;">
+                <label for="interests">
+                    <span class="tooltip-wrap">
+                        <span>{{ t("profile_interests") }} *</span>
+                        <span class="tooltip-icon" tabindex="0">?</span>
+                        <span class="tooltip-box">{{ t("profile_interests_hint") }}</span>
+                    </span>
+                </label>
+                <textarea name="interests" id="interests"
+                    class="input {% if invalid_fields and 'interests' in invalid_fields %}is-invalid{% endif %}"
+                    rows="3" required maxlength="500"
+                    placeholder="{{ t('profile_interests_placeholder') }}">{{ profile['interests'] if profile else '' }}</textarea>
+                <div class="field-error" id="interests_error" {% if invalid_fields and 'interests' in invalid_fields
+                    %}style="display:block;" {% endif %}>
+                    {{ t("profile_err_interests") }}
+                </div>
+            </div>
+
+            <div>
+                <label for="preferred_work_style">{{ t("profile_preferred_work_style") }} *</label>
+                <select name="preferred_work_style" id="preferred_work_style"
+                    class="input {% if invalid_fields and 'preferred_work_style' in invalid_fields %}is-invalid{% endif %}"
+                    required>
+                    <option value="">{{ t("profile_select_work_style") }}</option>
+                    <option value="Prefer working alone" {% if profile and
+                        profile['preferred_work_style']=='Prefer working alone' %}selected{% endif %}>{{
+                        t("profile_work_alone") }}</option>
+                    <option value="Prefer teamwork" {% if profile and profile['preferred_work_style']=='Prefer teamwork'
+                        %}selected{% endif %}>{{ t("profile_work_team") }}</option>
+                    <option value="Prefer structured tasks" {% if profile and
+                        profile['preferred_work_style']=='Prefer structured tasks' %}selected{% endif %}>{{
+                        t("profile_work_structured") }}</option>
+                    <option value="Prefer flexible tasks" {% if profile and
+                        profile['preferred_work_style']=='Prefer flexible tasks' %}selected{% endif %}>{{
+                        t("profile_work_flexible") }}</option>
+                    <option value="Hybrid" {% if profile and profile['preferred_work_style']=='Hybrid' %}selected{%
+                        endif %}>{{ t("profile_work_hybrid") }}</option>
+                </select>
+                <div class="field-error" id="preferred_work_style_error" {% if invalid_fields and 'preferred_work_style'
+                    in invalid_fields %}style="display:block;" {% endif %}>
+                    {{ t("profile_err_work_style") }}
+                </div>
+            </div>
+
+            <div style="grid-column:1 / -1;">
+                <label for="career_goal">
+                    <span class="tooltip-wrap">
+                        <span>{{ t("profile_career_goal") }}</span>
+                        <span class="tooltip-icon" tabindex="0">?</span>
+                        <span class="tooltip-box">{{ t("profile_career_goal_hint") }}</span>
+                    </span>
+                </label>
+                <textarea name="career_goal" id="career_goal"
+                    class="input {% if invalid_fields and 'career_goal' in invalid_fields %}is-invalid{% endif %}"
+                    rows="3" maxlength="500"
+                    placeholder="{{ t('profile_career_goal_placeholder') }}">{{ profile['career_goal'] if profile else '' }}</textarea>
+                <div class="field-error" id="career_goal_error" {% if invalid_fields and 'career_goal' in invalid_fields
+                    %}style="display:block;" {% endif %}>
+                    {{ t("profile_err_career_goal") }}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary">{{ t("profile_save_button") }}</button>
+
+            {% if session.get("resume_entry_mode") == "camera" %}
+            <a href="{{ url_for('profile.preview_resume_text') }}" class="btn btn-ghost" style="text-decoration:none;">
+                {{ t("back_button") }}
+            </a>
+            {% else %}
+            <a href="{{ url_for('profile.upload_resume_page') }}" class="btn btn-ghost" style="text-decoration:none;">
+                {{ t("back_button") }}
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.getElementById("confirmProfileForm");
+        let hasSubmitted = false;
+
+        const allowedTextRegex = /^[A-Za-z0-9\u00C0-\u024F\u4E00-\u9FFF\s&(),.\-\/+#]+$/;
+
+        const existingFieldOfStudyOptions = [
+            "Computer Science",
+            "Software Engineering",
+            "Data Science",
+            "Information Technology",
+            "Business",
+            "Marketing",
+            "Finance",
+            "Accounting",
+            "Engineering",
+            "Psychology",
+            "Design",
+            "Education"
+        ];
+
+        const existingOccupationOptions = [
+            "Student",
+            "Intern",
+            "Software Developer",
+            "Data Analyst",
+            "UI/UX Designer",
+            "Research Assistant",
+            "Business Analyst",
+            "Teacher",
+            "Freelancer",
+            "Unemployed"
+        ];
+
+        const irrelevantOtherWords = [
+            "abc", "test", "hello", "hi", "good", "nice", "ok", "okay", "happy",
+            "nothing", "none", "unknown", "whatever", "asd", "qwe", "zxc",
+            "haha", "hehe", "lol", "random", "word",
+
+            "ujian", "hai", "baik", "okey", "tiada", "kosong", "entah",
+            "tak tahu", "tidak tahu", "apa saja", "apa-apa",
+
+            "测试", "你好", "哈哈", "呵呵", "随便", "不知道", "没有", "空白", "测试词"
+        ];
+
+        const fieldOfStudyKeywords = [
+            "science", "engineering", "technology", "business", "marketing",
+            "finance", "accounting", "psychology", "design", "education",
+            "communication", "architecture", "cybersecurity", "biotechnology",
+            "mathematics", "law", "medicine", "data", "computer", "software",
+            "information", "media", "management", "economics", "hospitality",
+            "tourism", "pharmacy", "biology", "chemistry", "physics",
+            "statistics", "art", "multimedia", "animation",
+
+            "sains", "kejuruteraan", "teknologi", "perniagaan", "pemasaran",
+            "kewangan", "perakaunan", "psikologi", "reka bentuk", "pendidikan",
+            "komunikasi", "seni bina", "keselamatan siber", "bioteknologi",
+            "matematik", "undang-undang", "perubatan", "data", "komputer",
+            "perisian", "maklumat", "media", "pengurusan", "ekonomi",
+            "hospitaliti", "pelancongan", "farmasi", "biologi", "kimia",
+            "fizik", "statistik", "seni", "multimedia", "animasi",
+
+            "科学", "工程", "技术", "商业", "市场", "市场营销", "金融", "会计", "心理学",
+            "设计", "教育", "传播", "建筑", "网络安全", "生物技术", "数学",
+            "法律", "医学", "数据", "计算机", "软件", "信息技术", "媒体",
+            "管理", "经济", "酒店管理", "旅游", "药学", "生物", "化学",
+            "物理", "统计", "艺术", "多媒体", "动画"
+        ];
+
+        const occupationKeywords = [
+            "student", "intern", "developer", "analyst", "designer", "assistant",
+            "teacher", "lecturer", "manager", "engineer", "consultant",
+            "freelancer", "administrator", "programmer", "accountant",
+            "researcher", "executive", "writer", "creator", "specialist",
+            "officer", "coordinator", "artist", "architect", "nurse",
+            "doctor", "technician", "editor", "marketer", "trainer",
+
+            "pelajar", "pelatih", "pembangun", "penganalisis", "pereka",
+            "pembantu", "guru", "pensyarah", "pengurus", "jurutera",
+            "perunding", "pekerja bebas", "pentadbir", "pengatur cara",
+            "akauntan", "penyelidik", "eksekutif", "penulis", "pencipta",
+            "pakar", "pegawai", "penyelaras", "artis", "arkitek", "jururawat",
+            "doktor", "juruteknik", "editor", "pemasar", "jurulatih",
+
+            "学生", "实习生", "开发员", "开发者", "分析师", "设计师", "助理",
+            "教师", "讲师", "经理", "工程师", "顾问", "自由职业者", "管理员",
+            "程序员", "会计师", "研究员", "行政人员", "作家", "创作者",
+            "专员", "官员", "协调员", "艺术家", "建筑师", "护士",
+            "医生", "技术员", "编辑", "营销人员", "培训师"
+        ];
+
+        const msgEl = document.getElementById("profile-msgs") || { dataset: {} };
+
+        const MSG = {
+            ageRange: msgEl.dataset.ageRange || "Please select a valid age range.",
+            educationLevel: msgEl.dataset.educationLevel || "Please select a valid education level.",
+            fieldOfStudy: msgEl.dataset.fieldOfStudy || "Please select a valid field of study.",
+            fieldOfStudyOtherRequired: msgEl.dataset.fieldOfStudyOtherRequired || "Please enter your field of study.",
+            fieldOfStudyOtherInvalid: msgEl.dataset.fieldOfStudyOtherInvalid || "Please enter a valid and meaningful field of study. Random or irrelevant words are not allowed.",
+            currentOccupationOptional: msgEl.dataset.currentOccupationOptional || "Current occupation is optional. You may leave this field blank if not applicable.",
+            currentOccupationOtherRequired: msgEl.dataset.currentOccupationOtherRequired || "Please enter your current occupation.",
+            currentOccupationOtherInvalid: msgEl.dataset.currentOccupationOtherInvalid || "Please enter a valid and meaningful current occupation. Random or irrelevant words are not allowed.",
+            skills: msgEl.dataset.skills || "Please enter relevant skills, such as Python, SQL, communication, teamwork, programming, or data analysis.",
+            interests: msgEl.dataset.interests || "Please enter relevant interests, such as data analysis, programming, psychology, design, reading, or business.",
+            interestsRequired: msgEl.dataset.interestsRequired || "Interests is required.",
+            workStyle: msgEl.dataset.workStyle || "Please select a valid preferred work style.",
+            careerGoal: msgEl.dataset.careerGoal || "Please enter a meaningful career goal related to your future job or professional development."
+        };
+
+        function showError(field, message) {
+            if (!field) return;
+            const errorEl = document.getElementById(field.id + "_error");
+            field.classList.remove("is-valid");
+            field.classList.add("is-invalid");
+            if (errorEl) {
+                errorEl.textContent = message;
+                errorEl.style.display = "block";
+            }
+        }
+
+        function showValid(field) {
+            if (!field) return;
+            const errorEl = document.getElementById(field.id + "_error");
+            field.classList.remove("is-invalid");
+            field.classList.add("is-valid");
+            if (errorEl) {
+                errorEl.style.display = "none";
+            }
+        }
+
+        function clearState(field) {
+            if (!field) return;
+            const errorEl = document.getElementById(field.id + "_error");
+            field.classList.remove("is-invalid", "is-valid");
+            if (errorEl) errorEl.style.display = "none";
+        }
+
+        function containsCJK(value) {
+            return /[\u4E00-\u9FFF]/.test(value);
+        }
+
+        function validateSelect(field, message) {
+            if (!field.value.trim()) {
+                showError(field, message);
+                return false;
+            }
+            showValid(field);
+            return true;
+        }
+
+        function validateOptionalTextareaRelevant(field, maxLen, messageInvalid) {
+            const value = field.value.trim();
+
+            if (!value) {
+                clearState(field);
+                return true;
+            }
+
+            if (value.length > maxLen) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (value === "..." || value === ".." || value === ".") {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            showValid(field);
+            return true;
+        }
+
+        function validateRequiredTextareaRelevant(field, minLen, maxLen, messageEmpty, messageInvalid) {
+            const value = field.value.trim();
+
+            if (!value) {
+                showError(field, messageEmpty);
+                return false;
+            }
+
+            if (value.length < minLen || value.length > maxLen) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (value === "..." || value === ".." || value === ".") {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            showValid(field);
+            return true;
+        }
+
+        function isPunctuationOnly(value) {
+            return /^[\s.,\/#!$%^&*;:{}=\-_`~()]+$/.test(value);
+        }
+
+        function hasEnoughLettersOrCJK(value) {
+            const latinLetters = value.match(/[A-Za-z\u00C0-\u024F]/g);
+            const cjkChars = value.match(/[\u4E00-\u9FFF]/g);
+            const latinCount = latinLetters ? latinLetters.length : 0;
+            const cjkCount = cjkChars ? cjkChars.length : 0;
+            return latinCount >= 2 || cjkCount >= 2;
+        }
+
+        function isDuplicateOption(value, options) {
+            const normalized = value.trim().toLowerCase();
+            return options.some(opt => opt.toLowerCase() === normalized);
+        }
+
+        function containsIrrelevantWord(value) {
+            const normalized = value.trim().toLowerCase();
+            return irrelevantOtherWords.includes(normalized);
+        }
+
+        function looksLikeSentence(value) {
+            const normalized = value.trim().toLowerCase();
+            const badPhrases = [
+                "i like", "i love", "my hobby", "not sure", "no idea",
+                "reading books", "watch movie", "play game", "dont know",
+                "i am", "i want", "my job", "my study",
+                "saya suka", "saya mahu", "kerja saya", "bidang saya",
+                "我喜欢", "我想", "我的工作", "我的专业", "我的兴趣"
+            ];
+            return badPhrases.some(p => normalized.includes(p));
+        }
+
+        function isRepeatedCharacterOnly(value) {
+            const text = value.trim().toLowerCase().replace(/\s+/g, "");
+            if (!text) return false;
+            return /^([\u4E00-\u9FFFA-Za-z0-9])\1+$/.test(text);
+        }
+
+        function isMostlyRepeatedCharacters(value) {
+            const text = value.trim().toLowerCase().replace(/\s+/g, "");
+            if (text.length < 3) return false;
+
+            const counts = {};
+            for (const ch of text) {
+                counts[ch] = (counts[ch] || 0) + 1;
+            }
+
+            const maxCount = Math.max(...Object.values(counts));
+            return maxCount / text.length >= 0.8;
+        }
+
+        function splitWords(value) {
+            return value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        }
+
+        function hasAtLeastTwoUnits(value) {
+            if (containsCJK(value)) {
+                const cjkChars = value.match(/[\u4E00-\u9FFF]/g) || [];
+                return cjkChars.length >= 2 || splitWords(value).length >= 2;
+            }
+            return splitWords(value).length >= 2;
+        }
+
+        function areWordsRepeated(value) {
+            if (containsCJK(value) && !/\s/.test(value.trim())) {
+                return false;
+            }
+            const words = splitWords(value);
+            return words.length >= 2 && new Set(words).size !== words.length;
+        }
+
+        function areAllWordsIrrelevant(value) {
+            const words = splitWords(value);
+            return words.length > 0 && words.every(word => irrelevantOtherWords.includes(word));
+        }
+
+        function hasVeryShortWordsOnly(value) {
+            if (containsCJK(value)) return false;
+            const words = splitWords(value);
+            return words.length > 0 && words.every(word => word.length <= 3);
+        }
+
+        function looksRandomWord(word) {
+            if (irrelevantOtherWords.includes(word)) return true;
+            if (/^([a-z0-9])\1+$/.test(word)) return true;
+            if (/[bcdfghjklmnpqrstvwxyz]{5,}/i.test(word)) return true;
+            if (/asdf|qwer|zxcv|hjkl|sdfg|xcvb/i.test(word)) return true;
+            return false;
+        }
+
+        function containsRandomWords(value) {
+            if (containsCJK(value)) return false;
+            const words = splitWords(value);
+            return words.some(word => looksRandomWord(word));
+        }
+
+        function containsRelevantKeyword(value, keywordList) {
+            const text = value.trim().toLowerCase();
+            return keywordList.some(keyword => text.includes(keyword.toLowerCase()));
+        }
+
+        function validateOtherField(field, minLen, maxLen, messageEmpty, messageInvalid, optionsList, keywordList) {
+            const value = field.value.trim();
+
+            if (!value) {
+                showError(field, messageEmpty);
+                return false;
+            }
+
+            if (value.length < minLen || value.length > maxLen) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (!allowedTextRegex.test(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (isPunctuationOnly(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (isRepeatedCharacterOnly(value) || isMostlyRepeatedCharacters(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (!hasEnoughLettersOrCJK(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (!hasAtLeastTwoUnits(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (containsIrrelevantWord(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (areWordsRepeated(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (areAllWordsIrrelevant(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (hasVeryShortWordsOnly(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (containsRandomWords(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (looksLikeSentence(value)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (isDuplicateOption(value, optionsList)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            if (!containsRelevantKeyword(value, keywordList)) {
+                showError(field, messageInvalid);
+                return false;
+            }
+
+            showValid(field);
+            return true;
+        }
+
+        const fields = {
+            age_range: document.getElementById("age_range"),
+            education_level: document.getElementById("education_level"),
+            field_of_study: document.getElementById("field_of_study"),
+            field_of_study_other: document.getElementById("field_of_study_other"),
+            current_occupation: document.getElementById("current_occupation"),
+            current_occupation_other: document.getElementById("current_occupation_other"),
+            skills: document.getElementById("skills"),
+            interests: document.getElementById("interests"),
+            preferred_work_style: document.getElementById("preferred_work_style"),
+            career_goal: document.getElementById("career_goal")
+        };
+
+        function toggleOtherInput(selectField, wrapId, otherInputId) {
+            const wrap = document.getElementById(wrapId);
+            const otherInput = document.getElementById(otherInputId);
+
+            if (!selectField || !wrap || !otherInput) return;
+
+            if (selectField.value === "Other") {
+                wrap.style.display = "block";
+            } else {
+                wrap.style.display = "none";
+                otherInput.value = "";
+                otherInput.classList.remove("is-invalid", "is-valid");
+                const err = document.getElementById(otherInputId + "_error");
+                if (err) err.style.display = "none";
+            }
+        }
+
+        function validateSingleField(field) {
+            if (!field) return true;
+
+            if (field.id === "age_range") {
+                return validateSelect(field, MSG.ageRange);
+            }
+
+            if (field.id === "education_level") {
+                return validateSelect(field, MSG.educationLevel);
+            }
+
+            if (field.id === "field_of_study") {
+                toggleOtherInput(fields.field_of_study, "field_of_study_other_wrap", "field_of_study_other");
+                return validateSelect(field, MSG.fieldOfStudy);
+            }
+
+            if (field.id === "field_of_study_other") {
+                if (fields.field_of_study.value === "Other") {
+                    return validateOtherField(
+                        field,
+                        2,
+                        100,
+                        MSG.fieldOfStudyOtherRequired,
+                        MSG.fieldOfStudyOtherInvalid,
+                        existingFieldOfStudyOptions,
+                        fieldOfStudyKeywords
+                    );
+                }
+                clearState(field);
+                return true;
+            }
+
+            if (field.id === "current_occupation") {
+                toggleOtherInput(fields.current_occupation, "current_occupation_other_wrap", "current_occupation_other");
+                clearState(field);
+                return true;
+            }
+
+            if (field.id === "current_occupation_other") {
+                if (fields.current_occupation.value === "Other") {
+                    return validateOtherField(
+                        field,
+                        2,
+                        100,
+                        MSG.currentOccupationOtherRequired,
+                        MSG.currentOccupationOtherInvalid,
+                        existingOccupationOptions,
+                        occupationKeywords
+                    );
+                }
+                clearState(field);
+                return true;
+            }
+
+            if (field.id === "skills") {
+                return validateOptionalTextareaRelevant(field, 500, MSG.skills);
+            }
+
+            if (field.id === "interests") {
+                return validateRequiredTextareaRelevant(
+                    field,
+                    3,
+                    500,
+                    MSG.interestsRequired,
+                    MSG.interests
+                );
+            }
+
+            if (field.id === "preferred_work_style") {
+                return validateSelect(field, MSG.workStyle);
+            }
+
+            if (field.id === "career_goal") {
+                return validateOptionalTextareaRelevant(field, 500, MSG.careerGoal);
+            }
+
+            return true;
+        }
+
+        function validateForm() {
+            let isValid = true;
+
+            if (!validateSelect(fields.age_range, MSG.ageRange)) isValid = false;
+            if (!validateSelect(fields.education_level, MSG.educationLevel)) isValid = false;
+
+            toggleOtherInput(fields.field_of_study, "field_of_study_other_wrap", "field_of_study_other");
+            toggleOtherInput(fields.current_occupation, "current_occupation_other_wrap", "current_occupation_other");
+
+            if (!validateSelect(fields.field_of_study, MSG.fieldOfStudy)) {
+                isValid = false;
+            } else if (
+                fields.field_of_study.value === "Other" &&
+                !validateOtherField(
+                    fields.field_of_study_other,
+                    2,
+                    100,
+                    MSG.fieldOfStudyOtherRequired,
+                    MSG.fieldOfStudyOtherInvalid,
+                    existingFieldOfStudyOptions,
+                    fieldOfStudyKeywords
+                )
+            ) {
+                isValid = false;
+            }
+
+            if (fields.current_occupation.value === "Other") {
+                if (!validateOtherField(
+                    fields.current_occupation_other,
+                    2,
+                    100,
+                    MSG.currentOccupationOtherRequired,
+                    MSG.currentOccupationOtherInvalid,
+                    existingOccupationOptions,
+                    occupationKeywords
+                )) {
+                    isValid = false;
+                }
+            } else {
+                clearState(fields.current_occupation_other);
+            }
+
+            if (!validateOptionalTextareaRelevant(fields.skills, 500, MSG.skills)) isValid = false;
+
+            if (!validateRequiredTextareaRelevant(
+                fields.interests,
+                3,
+                500,
+                MSG.interestsRequired,
+                MSG.interests
+            )) isValid = false;
+
+            if (!validateSelect(fields.preferred_work_style, MSG.workStyle)) isValid = false;
+
+            if (!validateOptionalTextareaRelevant(fields.career_goal, 500, MSG.careerGoal)) isValid = false;
+
+            return isValid;
+        }
+
+        form.addEventListener("submit", function (e) {
+            hasSubmitted = true;
+
+            if (!validateForm()) {
+                e.preventDefault();
+
+                const firstInvalid = form.querySelector(".is-invalid");
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                    firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+            }
+        });
+
+        Object.values(fields).forEach(field => {
+            if (!field) return;
+
+            field.addEventListener("blur", function () {
+                if (!hasSubmitted) {
+                    validateSingleField(field);
+                } else {
+                    validateForm();
+                }
+            });
+
+            field.addEventListener("change", function () {
+                if (field.id === "field_of_study") {
+                    toggleOtherInput(fields.field_of_study, "field_of_study_other_wrap", "field_of_study_other");
+                }
+
+                if (field.id === "current_occupation") {
+                    toggleOtherInput(fields.current_occupation, "current_occupation_other_wrap", "current_occupation_other");
+                }
+
+                if (hasSubmitted) {
+                    validateForm();
+                }
+            });
+
+            field.addEventListener("input", function () {
+                if (hasSubmitted) {
+                    validateSingleField(field);
+                }
+            });
+        });
+
+        toggleOtherInput(fields.field_of_study, "field_of_study_other_wrap", "field_of_study_other");
+        toggleOtherInput(fields.current_occupation, "current_occupation_other_wrap", "current_occupation_other");
+    });
+</script>
+
+{% endblock %}

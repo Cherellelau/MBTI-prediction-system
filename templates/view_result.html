@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .vr-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .vr-card {
+    padding: 22px;
+    border-radius: 22px;
+  }
+
+  .vr-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .vr-type {
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0 0 10px 0;
+    color: #0f172a;
+  }
+
+  .vr-meta {
+    color: #64748b;
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .vr-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1e3a8a;
+    font-weight: 800;
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+
+  .vr-progress-wrap {
+    max-width: 420px;
+    margin-top: 8px;
+  }
+
+  .vr-progress-label {
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #0f172a;
+  }
+
+  .vr-progress-bg {
+    width: 100%;
+    height: 12px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .vr-progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2563eb, #7c3aed);
+    transition: width 1s ease;
+  }
+
+  .vr-btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .vr-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1px solid #dbeafe;
+    background: #fff;
+    color: #0f172a;
+    text-decoration: none;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+
+  .vr-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  }
+
+  .vr-btn-primary {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+  }
+
+  .vr-btn-secondary {
+    background: #f8fafc;
+  }
+
+  .vr-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  .vr-dim {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 16px;
+    background: #f8fafc;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+
+  .vr-dim:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+  }
+
+  .vr-dim-title {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+
+  .vr-dim-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+  }
+
+  .vr-dim-sub {
+    margin-top: 8px;
+    color: #475569;
+    font-size: 14px;
+  }
+
+  .vr-section {
+    margin-top: 20px;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .vr-section summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 16px 18px;
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .vr-section summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .vr-section summary::before {
+    content: "▶";
+    display: inline-block;
+    margin-right: 10px;
+    transition: transform .2s ease;
+    font-size: 14px;
+  }
+
+  .vr-section[open] summary::before {
+    transform: rotate(90deg);
+  }
+
+  .vr-section-body {
+    padding: 18px;
+  }
+
+  .vr-answer-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .vr-answer-item {
+    border: 1px solid #e5e7eb;
+    background: #fafafa;
+    border-radius: 14px;
+    padding: 14px;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+
+  .vr-answer-item:hover {
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  }
+
+  .vr-answer-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .vr-q-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 800;
+  }
+
+  .vr-opt-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 32px;
+    border-radius: 999px;
+    background: #ede9fe;
+    color: #6d28d9;
+    font-weight: 800;
+  }
+
+  .vr-answer-text {
+    color: #0f172a;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  .vr-raw {
+    white-space: pre-wrap;
+    line-height: 1.75;
+    color: #0f172a;
+  }
+
+  @media (max-width: 900px) {
+    .vr-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .vr-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .vr-type {
+      font-size: 36px;
+    }
+  }
+</style>
+
+<div class="vr-wrap">
+  <h1>{{ t('view_title') }}</h1>
+
+  {% set conf_pct = ((row["confidenceScore"] or 0)|float * 100)|round(0)|int %}
+  {% set type_code = (row["typeCode"] or "")|upper %}
+
+  <div class="card vr-card">
+    <div class="vr-top">
+      <div>
+        <div class="vr-type">{{ type_code }}</div>
+
+        <div class="vr-badge">
+          {{ t('confidence_label') }} {{ conf_pct }}%
+        </div>
+
+        <div class="vr-meta">
+          {{ row["createdAt"] }}
+        </div>
+
+        <div class="vr-meta" style="margin-top:-2px;">
+          <strong>{{ t('view_test_method') }}:</strong>
+          {% if test_method == "scenario" %}
+          {{ t('view_test_method_scenario') }}
+          {% else %}
+          {{ t('view_test_method_voice') }}
+          {% endif %}
+        </div>
+
+        <div class="vr-progress-wrap">
+          <div class="vr-progress-label">
+            {{ t('confidence_label') }}
+          </div>
+          <div class="vr-progress-bg">
+            <div class="vr-progress-fill" data-width="{{ conf_pct }}%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="vr-btn-row">
+        <a class="vr-btn vr-btn-secondary"
+          href="{{ url_for('type_detail', type_code=type_code, back_to='result_view', result_id=row['resultID']) }}">
+          {{ t('view_type_details_btn') }}
+        </a>
+
+        <a class="vr-btn vr-btn-primary" href="{{ url_for('result.download_result_pdf', result_id=row['resultID']) }}">
+          {{ t('view_download_pdf_btn') if t('view_download_pdf_btn') != 'view_download_pdf_btn' else 'Download PDF' }}
+        </a>
+
+        <a class="vr-btn" href="{{ url_for('timeline.timeline') }}">
+          {{ t('back_btn') }}
+        </a>
+      </div>
+    </div>
+
+    <div class="vr-grid">
+      <div class="vr-dim">
+        <div class="vr-dim-title">E / I</div>
+        <div class="vr-dim-value">{{ type_code[0] if type_code|length >= 1 else "-" }}</div>
+        <div class="vr-dim-sub">{{ t('view_dim_energy') if t('view_dim_energy') != 'view_dim_energy' else 'Energy
+          preference' }}</div>
+      </div>
+
+      <div class="vr-dim">
+        <div class="vr-dim-title">S / N</div>
+        <div class="vr-dim-value">{{ type_code[1] if type_code|length >= 2 else "-" }}</div>
+        <div class="vr-dim-sub">{{ t('view_dim_information') if t('view_dim_information') != 'view_dim_information' else
+          'Information preference' }}</div>
+      </div>
+
+      <div class="vr-dim">
+        <div class="vr-dim-title">T / F</div>
+        <div class="vr-dim-value">{{ type_code[2] if type_code|length >= 3 else "-" }}</div>
+        <div class="vr-dim-sub">{{ t('view_dim_decision') if t('view_dim_decision') != 'view_dim_decision' else
+          'Decision preference' }}</div>
+      </div>
+
+      <div class="vr-dim">
+        <div class="vr-dim-title">J / P</div>
+        <div class="vr-dim-value">{{ type_code[3] if type_code|length >= 4 else "-" }}</div>
+        <div class="vr-dim-sub">{{ t('view_dim_lifestyle') if t('view_dim_lifestyle') != 'view_dim_lifestyle' else
+          'Lifestyle preference' }}</div>
+      </div>
+    </div>
+
+    {% if parsed_answers %}
+    <details class="vr-section" open>
+      <summary>{{ t('view_answers_section') if t('view_answers_section') != 'view_answers_section' else 'Your Answers'
+        }}</summary>
+      <div class="vr-section-body">
+        <div class="vr-answer-list">
+          {% for a in parsed_answers %}
+          <div class="vr-answer-item">
+            <div class="vr-answer-head">
+              <span class="vr-q-badge">Q{{ a.num }}</span>
+              <span class="vr-opt-badge">{{ a.letter }}</span>
+            </div>
+            <div class="vr-answer-text">{{ a.text }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
+    {% endif %}
+
+    {% if score_breakdown %}
+    <details class="vr-section" open>
+      <summary>{{ t('score_breakdown_title') }}</summary>
+      <div class="vr-section-body">
+        <div class="vr-grid">
+          <div class="vr-dim">
+            <div class="vr-dim-title">EI</div>
+            <div class="vr-dim-value">{{ score_breakdown.EI.value }}</div>
+            <div class="vr-dim-sub">{{ score_breakdown.EI.side }}</div>
+          </div>
+          <div class="vr-dim">
+            <div class="vr-dim-title">SN</div>
+            <div class="vr-dim-value">{{ score_breakdown.SN.value }}</div>
+            <div class="vr-dim-sub">{{ score_breakdown.SN.side }}</div>
+          </div>
+          <div class="vr-dim">
+            <div class="vr-dim-title">TF</div>
+            <div class="vr-dim-value">{{ score_breakdown.TF.value }}</div>
+            <div class="vr-dim-sub">{{ score_breakdown.TF.side }}</div>
+          </div>
+          <div class="vr-dim">
+            <div class="vr-dim-title">JP</div>
+            <div class="vr-dim-value">{{ score_breakdown.JP.value }}</div>
+            <div class="vr-dim-sub">{{ score_breakdown.JP.side }}</div>
+          </div>
+        </div>
+      </div>
+    </details>
+    {% endif %}
+
+    <details class="vr-section">
+      <summary>{{ t('raw_text_title') }}</summary>
+      <div class="vr-section-body">
+        <div class="vr-raw">{{ row["rawText"] or "" }}</div>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const bar = document.querySelector(".vr-progress-fill");
+    if (bar) {
+      const w = bar.dataset.width || "0%";
+      setTimeout(() => {
+        bar.style.width = w;
+      }, 180);
+    }
+  });
+</script>
+
+{% endblock %}

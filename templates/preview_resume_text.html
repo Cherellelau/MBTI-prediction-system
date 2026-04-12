@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card" style="max-width: 900px; margin: 24px auto;">
+    <h1>{{ t("resume_preview_title") }}</h1>
+    <p style="color:#6b7280;">
+        {{ t("resume_preview_subtitle") }}
+    </p>
+
+    <textarea class="input" rows="20" readonly>{{ raw_text }}</textarea>
+
+    <div style="margin-top: 20px; display:flex; gap:12px;">
+        {% if session.get("resume_entry_mode") == "camera" %}
+        <a href="{{ url_for('profile.capture_resume_page') }}" class="btn btn-ghost">
+            {{ t("back_button") }}
+        </a>
+        {% else %}
+        <a href="{{ url_for('profile.upload_resume_page') }}" class="btn btn-ghost">
+            {{ t("back_button") }}
+        </a>
+        {% endif %}
+        <a href="{{ url_for('profile.parse_resume_profile_page') }}" class="btn btn-primary"
+            style="text-decoration:none;">
+            {{ t("continue_button") }}
+        </a>
+    </div>
+</div>
+
+{% endblock %}

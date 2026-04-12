@@ -1,0 +1,680 @@
+{% extends "base.html" %}
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/timeline.css') }}">
+
+<div class="tl-wrap">
+
+  <!-- Title -->
+  <div class="tl-head">
+    <div>
+      <h1 class="tl-title">{{ t('tl_title') }}</h1>
+      <p class="tl-sub">{{ t('tl_subtitle') }}</p>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+      {% if summary.latest_type %}
+      <div class="tl-pill">
+        <span class="tl-pill-label">{{ t('tl_latest') }}</span>
+        <span class="tl-pill-value">{{ summary.latest_type }}</span>
+      </div>
+      {% else %}
+      <div class="tl-pill tl-pill-muted">
+        <span class="tl-pill-label">{{ t('tl_no_results_yet') }}</span>
+      </div>
+      {% endif %}
+
+      <form id="emailTimelineForm" method="POST" action="{{ url_for('timeline.send_timeline_email') }}"
+        enctype="multipart/form-data" style="margin:0;">
+        <input type="hidden" name="preset" value="{{ summary.preset }}">
+        <input type="hidden" name="start" value="{{ summary.start }}">
+        <input type="hidden" name="end" value="{{ summary.end }}">
+        <input type="hidden" name="q" value="{{ summary.q }}">
+        <input type="hidden" name="sort_by" value="{{ summary.sort_by }}">
+
+        <button id="btnEmailTimeline" type="submit" class="btn tl-btn-sm" {% if results|length < 3 %}disabled
+          style="opacity:.6;cursor:not-allowed;" {% endif %}>
+          {{ t('tl_email_btn') if t('tl_email_btn') != 'tl_email_btn' else '📩 Email Results (with Chart Image)' }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Guidance panel -->
+  <div class="tl-guide tl-guide-v2">
+    <div class="tl-guide-left">
+      <div class="tl-guide-head">
+        <div>
+          <h3>{{ t('tl_how_to_use') }}</h3>
+          <p class="tl-guide-sub">{{ t('tl_guide_sub') }}</p>
+        </div>
+      </div>
+
+      <div id="guideBody">
+        <div class="tl-guide-mini-grid">
+          <div class="tl-guide-mini">
+            <h4>{{ t('tl_quick_start') }}</h4>
+            <ul class="tl-guide-bullets">
+              <li>{{ t('tl_guide_quick_1') }}</li>
+              <li>{{ t('tl_guide_quick_2') }}</li>
+              <li>{{ t('tl_guide_quick_3') }}</li>
+            </ul>
+          </div>
+
+          <div class="tl-guide-mini">
+            <h4>{{ t('tl_how_filters_work') }}</h4>
+            <ul class="tl-guide-bullets">
+              <li>{{ t('tl_guide_filter_1') }}</li>
+              <li>{{ t('tl_guide_filter_2') }}</li>
+              <li>{{ t('tl_guide_filter_3') }}</li>
+            </ul>
+          </div>
+
+          <div class="tl-guide-mini">
+            <h4>{{ t('tl_valid_mbti') }}</h4>
+            <ul class="tl-guide-bullets">
+              <li>{{ t('tl_guide_valid_1') }}</li>
+              <li>{{ t('tl_guide_valid_2') }}</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="tl-guide-actions">
+          <a class="btn tl-btn" href="{{ url_for('test.test') }}">{{ t('tl_take_new_test') }}</a>
+
+          <button class="btn tl-btn tl-btn-ghost" id="btnTabResults" type="button">
+            {{ t('tl_go_results') }}
+          </button>
+
+          <button class="btn tl-btn tl-btn-ghost" id="btnTabTracker" type="button">
+            {{ t('tl_tab_tracker') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-guide-right">
+      <div class="tl-stat">
+        <div class="tl-stat-label">{{ t('tl_total_results_shown') }}</div>
+        <div class="tl-stat-value">{{ summary.total }}</div>
+      </div>
+
+      <div class="tl-stat">
+        <div class="tl-stat-label">{{ t('tl_active_filter') }}</div>
+        <div class="tl-stat-value">
+          {% if summary.preset == "all" %}{{ t('tl_filter_all') }}
+          {% elif summary.preset == "7d" %}{{ t('tl_filter_7d') }}
+          {% elif summary.preset == "30d" %}{{ t('tl_filter_30d') }}
+          {% elif summary.preset == "12m" %}{{ t('tl_filter_12m') }}
+          {% else %}{{ t('tl_filter_custom') }}
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="tl-stat">
+        <div class="tl-stat-label">{{ t('tl_date_range') }}</div>
+        <div class="tl-stat-value">
+          {% if summary.start or summary.end %}
+          {{ summary.start }} → {{ summary.end }}
+          {% else %}
+          —
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="tl-stat tl-stat-mini">
+        <div class="tl-stat-label">{{ t('tl_latest_type') }}</div>
+        <div class="tl-stat-value">
+          {% if summary.latest_type %}{{ summary.latest_type }}{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter bar -->
+  <div id="resultsAnchor"></div>
+  <div class="tl-filters" id="filtersBar">
+    <div class="tl-filter-row">
+      <button class="tl-chip" data-preset="all">{{ t('tl_filter_all') }}</button>
+      <button class="tl-chip" data-preset="7d">{{ t('tl_filter_7d') }}</button>
+      <button class="tl-chip" data-preset="30d">{{ t('tl_filter_30d') }}</button>
+      <button class="tl-chip" data-preset="12m">{{ t('tl_filter_12m') }}</button>
+    </div>
+
+    <div class="tl-filter-row tl-filter-row2">
+      <div class="tl-field">
+        <label>{{ t('tl_start') }}</label>
+        <input type="date" id="startDate" value="{{ summary.start }}">
+      </div>
+
+      <div class="tl-field">
+        <label>{{ t('tl_end') }}</label>
+        <input type="date" id="endDate" value="{{ summary.end }}">
+      </div>
+
+      <button class="btn tl-btn-sm" id="btnApplyRange" type="button">{{ t('tl_apply') }}</button>
+      <button class="btn tl-btn-sm tl-btn-ghost" id="btnClearRange" type="button">{{ t('tl_clear') }}</button>
+
+      <div class="tl-search">
+        <input id="qInput" type="text" maxlength="4" placeholder="{{ t('tl_search_placeholder') }}"
+          value="{{ summary.q }}">
+      </div>
+
+      <button class="btn tl-btn-sm" id="btnSearch" type="button">{{ t('tl_search') }}</button>
+
+      <div class="tl-field">
+        <label for="sortBy">{{ t('tl_sort_label') }}</label>
+        <select id="sortBy">
+          <option value="newest" {% if summary.sort_by=="newest" %}selected{% endif %}>{{ t('tl_sort_newest') }}
+          </option>
+          <option value="oldest" {% if summary.sort_by=="oldest" %}selected{% endif %}>{{ t('tl_sort_oldest') }}
+          </option>
+          <option value="type_asc" {% if summary.sort_by=="type_asc" %}selected{% endif %}>{{ t('tl_sort_type_asc') }}
+          </option>
+          <option value="type_desc" {% if summary.sort_by=="type_desc" %}selected{% endif %}>{{ t('tl_sort_type_desc')
+            }}</option>
+          <option value="conf_desc" {% if summary.sort_by=="conf_desc" %}selected{% endif %}>{{ t('tl_sort_conf_desc')
+            }}</option>
+          <option value="conf_asc" {% if summary.sort_by=="conf_asc" %}selected{% endif %}>{{ t('tl_sort_conf_asc') }}
+          </option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS TAB -->
+  <div id="tabPanelResults" style="margin-top:14px;">
+    {% if results|length == 0 %}
+    <div class="tl-empty">
+      <h3>{{ t('tl_empty_title') }}</h3>
+      <p>{{ t('tl_empty_sub') }}</p>
+      <a class="btn tl-btn" href="{{ url_for('test.test') }}">{{ t('tl_go_test') }}</a>
+    </div>
+    {% else %}
+    <div class="tl-grid" id="resultsGrid">
+      {% for r in results %}
+      <a class="tl-card tl-card-link {% if highlight and (r['resultID']|string == highlight|string) %}is-highlight{% endif %}"
+        id="rec-{{ r['resultID'] }}" data-type="{{ (r.typeCode or '')|upper }}"
+        href="{{ url_for('result.result_view', result_id=r['resultID']) }}">
+        <div class="tl-card-top">
+          <div>
+            <div class="tl-card-label">{{ t('tl_saved_result') }}</div>
+            <div class="tl-type">{{ r.typeCode }}</div>
+            <div class="tl-date">{{ r.createdAt }}</div>
+          </div>
+
+          {% if loop.first %}
+          <span class="tl-mini-badge">{{ t('tl_latest_badge') }}</span>
+          {% endif %}
+        </div>
+
+        <div class="tl-card-bottom">
+          <span class="tl-card-cta">{{ t('tl_view_details') }}</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- TRACKER TAB -->
+  <div id="trackerAnchor"></div>
+  <div id="tabPanelTracker" style="margin-top:18px; display:none;">
+    <h2 class="tl-title" id="timelineTracker">{{ t('tl_tracker_title') }}</h2>
+
+    {% set result_count = results|length %}
+
+    {% if result_count == 0 %}
+    <p class="tl-sub">{{ t('tl_empty_sub') }}</p>
+    <div class="tl-empty">
+      <h3>{{ t('tl_tracker_empty_title') }}</h3>
+      <p>{{ t('tl_tracker_empty_sub') }}</p>
+      <a class="btn tl-btn" href="{{ url_for('test.test') }}">{{ t('tl_go_test') }}</a>
+    </div>
+
+    {% elif result_count == 1 %}
+    <p class="tl-sub">{{ t('tl_first_result_sub') }}</p>
+
+    <div class="card" style="margin-top:14px;">
+      <h3>{{ t('tl_baseline_title') }}</h3>
+      <p>{{ t('tl_baseline_desc') }}</p>
+
+      <div style="margin-top:14px;">
+        <p><strong>{{ t('tl_mbti_type_label') }}</strong> {{ results[0].typeCode }}</p>
+        <p><strong>{{ t('tl_date_label') }}</strong> {{ results[0].createdAt }}</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px; opacity:.78; border:2px dashed #cbd5e1;">
+      <h3>{{ t('tl_trend_title') }}</h3>
+      <p>{{ t('tl_trend_desc') }}</p>
+    </div>
+
+    {% elif result_count == 2 %}
+    <p class="tl-sub">{{ t('tl_compare_sub') }}</p>
+
+    <div class="card" style="margin-top:14px;">
+      <h3>{{ t('tl_compare_title') }}</h3>
+      <p>{{ t('tl_compare_desc') }}</p>
+
+      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:16px;">
+        <div style="flex:1; min-width:240px; background:#f8fafc; border-radius:14px; padding:16px;">
+          <h4>{{ t('tl_previous_result') }}</h4>
+          <p><strong>{{ t('tl_mbti_type_label') }}</strong> {{ results[-2].typeCode }}</p>
+          <p><strong>{{ t('tl_date_label') }}</strong> {{ results[-2].createdAt }}</p>
+        </div>
+
+        <div style="flex:1; min-width:240px; background:#f8fafc; border-radius:14px; padding:16px;">
+          <h4>{{ t('tl_latest_result') }}</h4>
+          <p><strong>{{ t('tl_mbti_type_label') }}</strong> {{ results[-1].typeCode }}</p>
+          <p><strong>{{ t('tl_date_label') }}</strong> {{ results[-1].createdAt }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3>{{ t('tl_dimension_title') }}</h3>
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="text-align:left; border-bottom:1px solid #e5e7eb;">
+            <th style="padding:10px 8px;">{{ t('tl_dimension_label') }}</th>
+            <th style="padding:10px 8px;">{{ t('tl_previous_label') }}</th>
+            <th style="padding:10px 8px;">{{ t('tl_latest_label') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:10px 8px;">E / I</td>
+            <td style="padding:10px 8px;">{{ results[-2].eiSide }}</td>
+            <td style="padding:10px 8px;">{{ results[-1].eiSide }}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px;">S / N</td>
+            <td style="padding:10px 8px;">{{ results[-2].snSide }}</td>
+            <td style="padding:10px 8px;">{{ results[-1].snSide }}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px;">T / F</td>
+            <td style="padding:10px 8px;">{{ results[-2].tfSide }}</td>
+            <td style="padding:10px 8px;">{{ results[-1].tfSide }}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 8px;">J / P</td>
+            <td style="padding:10px 8px;">{{ results[-2].jpSide }}</td>
+            <td style="padding:10px 8px;">{{ results[-1].jpSide }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <p class="tl-sub">{{ t('timeline_guide') }}</p>
+
+    <div id="legendTip" style="position:fixed; display:none; max-width:320px; z-index:9999;
+            padding:10px 12px; border-radius:10px; background:#111827; color:#fff;
+            font-size:13px; line-height:1.35; box-shadow:0 10px 30px rgba(0,0,0,.18);">
+    </div>
+
+    <div class="tl-chart-grid" style="margin-top:14px;">
+      <div class="card">
+        <h3>{{ t('tl_chart_ei') }}</h3>
+        <div style="height:260px;"><canvas id="chartEI"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>{{ t('tl_chart_sn') }}</h3>
+        <div style="height:260px;"><canvas id="chartSN"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>{{ t('tl_chart_tf') }}</h3>
+        <div style="height:260px;"><canvas id="chartTF"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>{{ t('tl_chart_jp') }}</h3>
+        <div style="height:260px;"><canvas id="chartJP"></canvas></div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Load Chart.js ONCE -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <script id="chart-data" type="application/json">
+  {{ chart_data | tojson }}
+  </script>
+
+  <script id="timeline-meta" type="application/json">
+  {{ {"resultCount": results|length, "preset": summary.preset}|tojson }}
+  </script>
+
+  <script id="timeline-i18n" type="application/json">
+{{
+  {
+    "alert_invalid_range": t("tl_js_invalid_range") if t("tl_js_invalid_range") != "tl_js_invalid_range" else "Start date cannot be after end date.",
+    "alert_invalid_mbti": t("tl_js_invalid_mbti") if t("tl_js_invalid_mbti") != "tl_js_invalid_mbti" else "Please enter a valid MBTI code (e.g., INTJ, ENFP).",
+    "email": {
+      "capturing": t("tl_js_capturing") if t("tl_js_capturing") != "tl_js_capturing" else "📩 Capturing charts...",
+      "sending": t("tl_js_sending") if t("tl_js_sending") != "tl_js_sending" else "📩 Sending email...",
+      "capture_failed": t("tl_js_capture_failed") if t("tl_js_capture_failed") != "tl_js_capture_failed" else "Failed to capture chart image. Please try again."
+    },
+    "desc": {
+      "E": t("tl_desc_E"),
+      "I": t("tl_desc_I"),
+      "S": t("tl_desc_S"),
+      "N": t("tl_desc_N"),
+      "T": t("tl_desc_T"),
+      "F": t("tl_desc_F"),
+      "J": t("tl_desc_J"),
+      "P": t("tl_desc_P")
+    },
+    "guide": {
+      "hide": t("tl_hide_guide"),
+      "show": t("tl_show_guide")
+    }
+  } | tojson
+}}
+</script>
+
+  <script>
+    window.TIMELINE_I18N = JSON.parse(document.getElementById("timeline-i18n")?.textContent || "{}");
+    window.TIMELINE_PRESET = "{{ summary.preset }}";
+  </script>
+
+  <!-- Charts -->
+  <script>
+    (() => {
+      const chartData = JSON.parse(document.getElementById("chart-data")?.textContent || "{}");
+      const meta = JSON.parse(document.getElementById("timeline-meta")?.textContent || "{}");
+      const resultCount = meta.resultCount || 0;
+
+      if (resultCount < 3) return;
+      if (!chartData.labels || chartData.labels.length === 0) return;
+
+      const labels = chartData.labels;
+      const DESC = (window.TIMELINE_I18N && window.TIMELINE_I18N.desc) ? window.TIMELINE_I18N.desc : {};
+      const tip = document.getElementById("legendTip");
+
+      function showLegendTip(text, evt) {
+        if (!tip) return;
+        tip.textContent = text;
+        tip.style.display = "block";
+        const pad = 12;
+        const x = (evt?.native?.clientX ?? evt?.clientX ?? 0) + pad;
+        const y = (evt?.native?.clientY ?? evt?.clientY ?? 0) + pad;
+        tip.style.left = x + "px";
+        tip.style.top = y + "px";
+      }
+
+      function hideLegendTip() {
+        if (tip) tip.style.display = "none";
+      }
+
+      const inv = (arr) => (arr || []).map(v => (v === 1 ? 0 : 1));
+
+      function buildBinaryChart(canvasId, labelA, keyA, dataA, labelB, keyB, dataB) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        return new Chart(canvas.getContext("2d"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              { label: labelA, meaningKey: keyA, data: dataA, tension: 0.25 },
+              { label: labelB, meaningKey: keyB, data: dataB, tension: 0.25 }
+            ]
+          },
+          options: {
+            animation: false,
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "nearest", intersect: true },
+            scales: {
+              y: {
+                min: 0,
+                max: 1,
+                ticks: { stepSize: 1 }
+              }
+            },
+            plugins: {
+              legend: {
+                position: "top",
+                onHover: (evt, item, legend) => {
+                  const ds = legend.chart.data.datasets[item.datasetIndex];
+                  const k = ds.meaningKey;
+                  showLegendTip(k + ": " + (DESC[k] || ""), evt);
+                },
+                onLeave: () => hideLegendTip()
+              },
+              tooltip: { enabled: true }
+            }
+          }
+        });
+      }
+
+      buildBinaryChart("chartEI", "E", "E", chartData.ei, "I", "I", inv(chartData.ei));
+      buildBinaryChart("chartSN", "S", "S", chartData.sn, "N", "N", inv(chartData.sn));
+      buildBinaryChart("chartTF", "T", "T", chartData.tf, "F", "F", inv(chartData.tf));
+      buildBinaryChart("chartJP", "J", "J", chartData.jp, "P", "P", inv(chartData.jp));
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const panelResults = document.getElementById("tabPanelResults");
+      const panelTracker = document.getElementById("tabPanelTracker");
+      const filtersBar = document.getElementById("filtersBar");
+
+      const btnResults = document.getElementById("btnTabResults");
+      const btnTracker = document.getElementById("btnTabTracker");
+
+      function setActive(btn, active) {
+        if (!btn) return;
+        if (active) btn.classList.remove("tl-btn-ghost");
+        else btn.classList.add("tl-btn-ghost");
+      }
+
+      function showResults(doScroll = false) {
+        if (panelResults) panelResults.style.display = "";
+        if (panelTracker) panelTracker.style.display = "none";
+        if (filtersBar) filtersBar.style.display = "";
+
+        setActive(btnResults, true);
+        setActive(btnTracker, false);
+
+        if (doScroll) {
+          document.getElementById("resultsAnchor")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+
+      function showTracker(doScroll = false) {
+        if (panelResults) panelResults.style.display = "none";
+        if (panelTracker) panelTracker.style.display = "";
+        if (filtersBar) filtersBar.style.display = "none";
+
+        setActive(btnResults, false);
+        setActive(btnTracker, true);
+
+        setTimeout(() => window.dispatchEvent(new Event("resize")), 300);
+
+        if (doScroll) {
+          document.getElementById("timelineTracker")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+
+      window.__showResults = () => showResults(true);
+      window.__showTracker = () => showTracker(true);
+
+      btnResults?.addEventListener("click", () => showResults(true));
+      btnTracker?.addEventListener("click", () => showTracker(true));
+
+      showResults(false);
+    })();
+  </script>
+
+  <script src="{{ url_for('static', filename='js/timeline.js') }}" defer></script>
+
+  <!-- Email chart capture + upload -->
+  <script>
+    (() => {
+      const form = document.getElementById("emailTimelineForm");
+      const btn = document.getElementById("btnEmailTimeline");
+      const captureTarget = document.querySelector(".tl-chart-grid");
+      const meta = JSON.parse(document.getElementById("timeline-meta")?.textContent || "{}");
+      const resultCount = meta.resultCount || 0;
+
+      if (!form || !btn) return;
+      if (resultCount < 3) return;
+      if (!captureTarget) return;
+
+      const I18N = window.TIMELINE_I18N || {};
+      const EMAIL = I18N.email || {};
+
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+      async function ensureTrackerVisibleAndChartsReady() {
+        const panelResults = document.getElementById("tabPanelResults");
+        const panelTracker = document.getElementById("tabPanelTracker");
+
+        if (panelResults) panelResults.style.display = "none";
+        if (panelTracker) panelTracker.style.display = "";
+
+        window.scrollTo(0, 0);
+        window.dispatchEvent(new Event("resize"));
+
+        await sleep(1200);
+        window.dispatchEvent(new Event("resize"));
+        await sleep(600);
+
+        const canvases = document.querySelectorAll(".tl-chart-grid canvas");
+        if (!canvases.length) throw new Error("No canvas found");
+
+        canvases.forEach((c) => {
+          const r = c.getBoundingClientRect();
+          if (r.width < 50 || r.height < 50) {
+            throw new Error("Canvas not rendered yet");
+          }
+        });
+
+        const st = window.getComputedStyle(captureTarget);
+        if (st.display === "none" || st.visibility === "hidden") {
+          throw new Error("Tracker not visible for capture");
+        }
+      }
+
+      async function captureChartsBlob() {
+        await ensureTrackerVisibleAndChartsReady();
+
+        const tip = document.getElementById("legendTip");
+        const prevTip = tip ? tip.style.display : "";
+        if (tip) tip.style.display = "none";
+
+        try {
+          const canvas = await html2canvas(captureTarget, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            scrollX: 0,
+            scrollY: -window.scrollY
+          });
+
+          const blob = await new Promise((resolve) =>
+            canvas.toBlob(resolve, "image/jpeg", 0.9)
+          );
+
+          if (!blob) throw new Error("Canvas toBlob returned null");
+          return blob;
+        } finally {
+          if (tip) tip.style.display = prevTip || "none";
+        }
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const oldText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = EMAIL.capturing || "📩 Capturing charts...";
+
+        try {
+          const blob = await captureChartsBlob();
+
+          btn.textContent = EMAIL.sending || "📩 Sending email...";
+
+          const fd = new FormData(form);
+          fd.append("chart_file", blob, "timeline_charts.jpg");
+
+          const res = await fetch(form.action, {
+            method: "POST",
+            body: fd,
+            headers: { "X-Requested-With": "fetch" }
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (data.ok) {
+            alert("✅ " + (data.msg || "Email sent."));
+          } else {
+            alert("❌ " + (data.msg || "Email failed."));
+          }
+
+          btn.disabled = false;
+          btn.textContent = oldText;
+
+          if (typeof window.__showResults === "function") {
+            window.__showResults();
+          }
+
+          if (res.redirected) {
+            window.location.href = res.url;
+            return;
+          }
+
+          window.location.reload();
+        } catch (err) {
+          console.error("Capture error details:", err);
+          alert(err?.message || (EMAIL.capture_failed || "Failed to capture chart image. Please try again."));
+          btn.disabled = false;
+          btn.textContent = oldText;
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const sortBy = document.getElementById("sortBy");
+      if (!sortBy) return;
+
+      function buildUrlWithCurrentFilters() {
+        const url = new URL(window.location.href);
+
+        const start = document.getElementById("startDate")?.value || "";
+        const end = document.getElementById("endDate")?.value || "";
+        const q = document.getElementById("qInput")?.value || "";
+
+        if (start) url.searchParams.set("start", start);
+        else url.searchParams.delete("start");
+
+        if (end) url.searchParams.set("end", end);
+        else url.searchParams.delete("end");
+
+        if (q) url.searchParams.set("q", q.toUpperCase());
+        else url.searchParams.delete("q");
+
+        url.searchParams.set("sort_by", sortBy.value);
+        url.hash = "resultsAnchor";
+
+        return url.toString();
+      }
+
+      sortBy.addEventListener("change", () => {
+        window.location.href = buildUrlWithCurrentFilters();
+      });
+    })();
+  </script>
+
+</div>
+{% endblock %}

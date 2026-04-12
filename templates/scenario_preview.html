@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="scenario-preview-wrap">
+
+    <!-- Header -->
+    <div class="preview-header">
+        <div>
+            <h1 class="preview-title">{{ t('scenario_preview_title') }}</h1>
+            <p class="preview-subtitle">{{ t('scenario_preview_sub') }}</p>
+        </div>
+
+        <div class="preview-summary-card">
+            <div class="summary-number">{{ items|length }}</div>
+            <div class="summary-label">
+                {{ t('scenario_preview_answered').format(answered=items|length, total=items|length) }}
+            </div>
+            <div class="summary-status">{{ t('scenario_preview_reviewed') }}</div>
+        </div>
+    </div>
+
+    <!-- Question List -->
+    <div class="preview-card">
+        <div class="preview-grid">
+            {% for it in items %}
+            <div class="question-preview-card">
+                <div class="question-preview-top">
+                    <span class="question-badge">Q{{ it.num }}</span>
+                    <a class="edit-link" href="{{ it.editUrl }}">✏ {{ t('scenario_edit') }}</a>
+                </div>
+
+                <p class="question-text">{{ it.questionText }}</p>
+
+                <div class="answer-box">
+                    <span class="answer-label">{{ t('scenario_your_answer') }}</span>
+                    <div class="answer-text">
+                        {% set answer_parts = it.answerText.split(' - ', 1) %}
+                        {% if answer_parts|length > 1 %}
+                        <span class="answer-option-badge">{{ answer_parts[0] }}</span>
+                        <span>{{ answer_parts[1] }}</span>
+                        {% else %}
+                        <span>{{ it.answerText }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Sticky Bottom Action Bar -->
+<div class="preview-action-bar">
+    <div class="preview-action-inner">
+        <a class="btn preview-secondary-btn" href="{{ url_for('test.scenario_start') }}">
+            {{ t('scenario_back_to_test') }}
+        </a>
+
+        <a class="btn btn-primary confirm-btn" href="{{ url_for('result.result_page') }}">
+            {{ t('scenario_generate_result') }}
+        </a>
+    </div>
+</div>
+
+<style>
+    .scenario-preview-wrap {
+        padding-bottom: 20px;
+    }
+
+    .preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+    }
+
+    .preview-title {
+        margin: 0 0 6px 0;
+        font-size: 2rem;
+        line-height: 1.2;
+    }
+
+    .preview-subtitle {
+        margin: 0;
+        opacity: .8;
+        font-size: 1rem;
+    }
+
+    .preview-summary-card {
+        min-width: 250px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 16px 18px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .summary-number {
+        width: 54px;
+        height: 54px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.2rem;
+        background: linear-gradient(135deg, #e0e7ff, #ede9fe);
+        color: #3730a3;
+        flex-shrink: 0;
+    }
+
+    .summary-label {
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .summary-status {
+        font-size: .95rem;
+        opacity: .75;
+    }
+
+    .preview-top-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 0 0 18px 0;
+    }
+
+    .top-tag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: #f5f3ff;
+        color: #5b21b6;
+        font-weight: 700;
+        font-size: .9rem;
+        border: 1px solid #e9d5ff;
+    }
+
+    .preview-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 24px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+    }
+
+    .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .question-preview-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 18px;
+        background: #fcfcff;
+        transition: transform .18s ease, box-shadow .18s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .question-preview-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .question-preview-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .question-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 52px;
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3730a3;
+        font-weight: 700;
+        font-size: .95rem;
+    }
+
+    .edit-link {
+        text-decoration: none;
+        font-weight: 700;
+        font-size: .9rem;
+        color: #4f46e5;
+        padding: 7px 12px;
+        border-radius: 10px;
+        background: #f5f3ff;
+        border: 1px solid #e9d5ff;
+        transition: all .18s ease;
+    }
+
+    .preview-secondary-btn:hover,
+    .confirm-btn:hover,
+
+    .edit-link:hover {
+        transform: translateY(-1px);
+        transition: 0.18s ease;
+    }
+
+    .question-text {
+        margin: 0 0 14px 0;
+        font-weight: 700;
+        line-height: 1.5;
+        color: #111827;
+    }
+
+    .answer-box {
+        border-radius: 14px;
+        padding: 14px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        margin-top: auto;
+    }
+
+    .answer-label {
+        display: block;
+        font-size: .82rem;
+        font-weight: 700;
+        color: #6b7280;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    .answer-text {
+        line-height: 1.6;
+        color: #1f2937;
+        font-weight: 500;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .answer-option-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: #ede9fe;
+        color: #5b21b6;
+        font-weight: 700;
+        font-size: .9rem;
+        flex-shrink: 0;
+    }
+
+    .preview-action-bar {
+        position: sticky;
+        bottom: 0;
+        z-index: 50;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(8px);
+        border-top: 1px solid #e5e7eb;
+        box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.08);
+    }
+
+    .preview-action-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .preview-secondary-btn {
+        background: #fff;
+        border: 1px solid #d1d5db;
+    }
+
+    .confirm-btn {
+        min-width: 220px;
+        text-align: center;
+    }
+
+    @media (max-width: 900px) {
+        .preview-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .preview-title {
+            font-size: 1.7rem;
+        }
+
+        .preview-summary-card {
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .preview-action-inner {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .confirm-btn,
+        .preview-action-inner .btn {
+            width: 100%;
+            text-align: center;
+        }
+
+        .preview-card {
+            padding: 14px;
+        }
+
+        .question-preview-card {
+            padding: 14px;
+        }
+    }
+</style>
+
+{% endblock %}

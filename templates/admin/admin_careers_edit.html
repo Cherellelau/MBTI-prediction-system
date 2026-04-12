@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:980px;margin:0 auto;">
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+    <div>
+      <h1 style="margin:0;">Edit Career</h1>
+      <p class="muted" style="margin:6px 0 0;">
+        Update the career URL and multilingual content (EN/BM/ZH) that users will see for this MBTI recommendation.
+      </p>
+    </div>
+    <a class="btn" href="{{ url_for('admin.careers_list', type=career.typeCode) }}">← Back</a>
+  </div>
+
+  <!-- ✅ Admin Guidelines (Collapsible) -->
+  <details
+    style="margin:14px 0 14px; padding:14px 16px; border:1px solid #e5e7eb; border-radius:14px; background:#f8fafc;">
+    <summary style="cursor:pointer; font-weight:900; color:#0f172a;">
+      Admin Guidelines (Click to expand)
+    </summary>
+
+    <div style="margin-top:12px; line-height:1.65; color:#0f172a;">
+      <ol style="margin:0; padding-left:18px;">
+
+        <li>
+          <b>Confirm you are editing the correct career</b><br>
+          Check the <b>MBTI Type</b> and <b>Career Key</b> before making changes to avoid updating the wrong record.
+        </li>
+
+        <li style="margin-top:10px;">
+          <b>Career Key rules (stable identifier)</b><br>
+          Use <b>snake_case</b> only (e.g., <code>ux_researcher</code>, <code>data_analyst</code>). Allowed: <b>a–z</b>,
+          <b>0–9</b>, <b>_</b>.<br>
+          Avoid changing the Career Key after it has been used because it links EN/BM/ZH text records. If you need a new
+          key, create a new entry instead.
+        </li>
+
+        <li style="margin-top:10px;">
+          <b>URL rules (reference link)</b><br>
+          URL must start with <b>https://</b> and should be a reliable source (official, O*NET, JobStreet,
+          university/government pages).<br>
+          Avoid unstable or login-required links.
+        </li>
+
+        <li style="margin-top:10px;">
+          <b>English fields are required</b><br>
+          <b>English Career Name</b> and <b>English Career Description</b> must not be empty. BM/ZH are optional but
+          recommended for
+          a better user experience.
+        </li>
+
+        <li style="margin-top:10px;">
+          <b>Translation (EN → BM/ZH)</b><br>
+          Update EN first, then click <b>Translate</b> to generate BM and ZH for both <b>Career Name</b> and
+          <b>Career Description</b>.<br>
+          After generating, review BM/ZH and edit manually if job terms look inaccurate.
+        </li>
+
+        <li style="margin-top:10px;">
+          <b>Content quality</b><br>
+          Keep descriptions concise: <b>1–2 sentences</b>. Explain why the career fits the MBTI type (skills, strengths,
+          work style).<br>
+          Avoid vague text like “good career” or “suitable job” — include at least one specific reason.
+        </li>
+
+        <li style="margin-top:10px;">
+          <b>Save & verify</b><br>
+          Click <b>Save Changes</b>, then refresh or re-open the page to confirm the updated EN/BM/ZH content is saved
+          correctly.
+        </li>
+
+      </ol>
+    </div>
+  </details>
+
+  <!-- ✅ Blue error / info box (hidden by default) -->
+  <div id="formErr"
+    style="display:none;margin:0 0 12px;padding:12px 14px;border:1px solid #fecaca;background:#fff1f2;color:#991b1b;border-radius:14px;font-weight:800;">
+    Please fix the highlighted fields.
+  </div>
+
+  <div class="card" style="padding:16px;border-radius:16px;margin-top:14px;">
+    <form id="careerForm" method="post" action="{{ url_for('admin.careers_update', career_id=career.careerID) }}">
+
+      <!-- Mapping -->
+      <div style="display:grid;grid-template-columns: 1fr 1fr;gap:12px;">
+        <div>
+          <label class="muted">MBTI Type</label>
+          <input value="{{ career.typeCode }}" disabled style="width:100%;">
+        </div>
+
+        <div>
+          <label class="muted">Career Key</label>
+          <input id="careerKey" name="careerKey" value="{{ career.careerKey }}" required style="width:100%;"
+            placeholder="e.g. ux_researcher" autocomplete="off">
+        </div>
+
+        <div>
+          <label class="muted">URL</label>
+          <input id="careerUrl" name="url" value="{{ career.url }}" required style="width:100%;"
+            placeholder="https://..." autocomplete="off">
+          <div class="muted" style="font-size:12px;margin-top:6px;">
+            Must start with https://
+          </div>
+        </div>
+      </div>
+
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e5e7eb;">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h3 style="margin:0;">Career Names</h3>
+        <span class="muted" style="font-size:12px;">Shown as job name to users</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:14px;margin-top:12px;">
+        <!-- EN title -->
+        <div class="card" style="padding:14px;border-radius:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <b>English (EN)</b>
+            <span class="muted" style="font-size:12px;">Source for auto-translation</span>
+          </div>
+          <div style="margin-top:10px;">
+            <input id="title_en" name="title_en" required placeholder="Career Name (EN) e.g. Social Worker"
+              value="{{ texts.get('EN', {}).get('title', '') }}" style="width:100%;">
+            <div class="muted" style="font-size:12px;margin-top:6px;">
+              Required. Write EN title first, then use Translate.
+            </div>
+          </div>
+        </div>
+
+        <!-- BM title -->
+        <div class="card" style="padding:14px;border-radius:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <b>Bahasa Melayu (BM)</b>
+            <span class="muted" style="font-size:12px;">Shown when user selects BM</span>
+          </div>
+          <div style="margin-top:10px;">
+            <input id="title_bm" name="title_bm" placeholder="Career Name (BM)"
+              value="{{ texts.get('BM', {}).get('title', '') }}" style="width:100%;">
+          </div>
+        </div>
+
+        <!-- ZH title -->
+        <div class="card" style="padding:14px;border-radius:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <b>中文 (ZH)</b>
+            <span class="muted" style="font-size:12px;">Shown when user selects ZH</span>
+          </div>
+          <div style="margin-top:10px;">
+            <input id="title_zh" name="title_zh" placeholder="职业名称（中文）"
+              value="{{ texts.get('ZH', {}).get('title', '') }}" style="width:100%;">
+          </div>
+        </div>
+      </div>
+
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e5e7eb;">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h3 style="margin:0;">Career Descriptions</h3>
+
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" class="btn" id="autoTranslateBtn">Translate</button>
+          <span class="muted" id="translateStatus" style="font-size:12px;"></span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:14px;margin-top:12px;">
+
+        <!-- EN -->
+        <div class="card" style="padding:14px;border-radius:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <b>English (EN)</b>
+            <span class="muted" style="font-size:12px;">Source for auto-translation</span>
+          </div>
+          <div style="margin-top:10px;">
+            <textarea id="desc_en" name="desc_en" rows="4" required
+              placeholder="Description (EN)">{{ texts.get('EN', {}).get('description', '') }}</textarea>
+            <div class="muted" style="font-size:12px;margin-top:6px;">
+              Required. Write EN first, then use Translate.
+            </div>
+          </div>
+        </div>
+
+        <!-- BM -->
+        <div class="card" style="padding:14px;border-radius:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <b>Bahasa Melayu (BM)</b>
+            <span class="muted" style="font-size:12px;">Shown when user selects BM</span>
+          </div>
+          <div style="margin-top:10px;">
+            <textarea id="desc_bm" name="desc_bm" rows="4"
+              placeholder="Description (BM)">{{ texts.get('BM', {}).get('description', '') }}</textarea>
+          </div>
+        </div>
+
+        <!-- ZH -->
+        <div class="card" style="padding:14px;border-radius:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <b>中文 (ZH)</b>
+            <span class="muted" style="font-size:12px;">Shown when user selects ZH</span>
+          </div>
+          <div style="margin-top:10px;">
+            <textarea id="desc_zh" name="desc_zh" rows="4"
+              placeholder="Description (ZH)">{{ texts.get('ZH', {}).get('description', '') }}</textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+        <a class="btn" href="{{ url_for('admin.careers_list', type=career.typeCode) }}">Cancel</a>
+        <button class="btn btn-primary" type="submit">Save Changes</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // ----------- Auto translate -----------
+    const btn = document.getElementById("autoTranslateBtn");
+    const status = document.getElementById("translateStatus");
+
+    const enEl = document.getElementById("desc_en");
+    const bmEl = document.getElementById("desc_bm");
+    const zhEl = document.getElementById("desc_zh");
+
+    const titleEnEl = document.getElementById("title_en");
+    const titleBmEl = document.getElementById("title_bm");
+    const titleZhEl = document.getElementById("title_zh");
+
+    async function translate(text, target) {
+      const res = await fetch("{{ url_for('admin.admin_translate') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, target })
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+      let data = null;
+
+      if (contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        await res.text();
+        throw new Error(`Server did not return JSON (status ${res.status}).`);
+      }
+
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      if (data.error) throw new Error(data.error);
+
+      return data.translated || "";
+    }
+
+    if (btn && enEl && bmEl && zhEl) {
+      btn.addEventListener("click", async () => {
+        const enTitle = (titleEnEl.value || "").trim();
+        const enDesc = (enEl.value || "").trim();
+
+        if (!enTitle) {
+          alert("Type English career name first.");
+          titleEnEl.focus();
+          return;
+        }
+        if (!enDesc) {
+          alert("Type English description first.");
+          enEl.focus();
+          return;
+        }
+
+        btn.disabled = true;
+        status.textContent = "Translating…";
+
+        try {
+          const [bmTitle, zhTitle, bmDesc, zhDesc] = await Promise.all([
+            translate(enTitle, "BM"),
+            translate(enTitle, "ZH"),
+            translate(enDesc, "BM"),
+            translate(enDesc, "ZH"),
+          ]);
+
+          if (!titleBmEl.value.trim()) titleBmEl.value = bmTitle;
+          if (!titleZhEl.value.trim()) titleZhEl.value = zhTitle;
+
+          if (!bmEl.value.trim()) bmEl.value = bmDesc;
+          if (!zhEl.value.trim()) zhEl.value = zhDesc;
+
+          status.textContent = "Done ✅";
+          setTimeout(() => status.textContent = "", 1500);
+
+        } catch (e) {
+          console.error(e);
+          status.textContent = "";
+          alert("Translation failed: " + e.message);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    // ----------- Form validation -----------
+    const form = document.getElementById("careerForm");
+    const errBox = document.getElementById("formErr");
+    const keyEl = document.getElementById("careerKey");
+    const urlEl = document.getElementById("careerUrl");
+
+    const titleEnEl2 = document.getElementById("title_en");
+
+    if (titleEnEl2) titleEnEl2.addEventListener("input", () => setBad(titleEnEl2, !validEN(titleEnEl2.value)));
+
+    function setBad(el, bad) {
+      if (!el) return;
+      el.style.borderColor = bad ? "#2563eb" : "";
+      el.style.boxShadow = bad ? "0 0 0 3px rgba(37, 99, 235, 0.20)" : "";
+    }
+
+    function validKey(v) {
+      // snake_case: letters/numbers/underscore only
+      return /^[a-z0-9]+(?:_[a-z0-9]+)*$/.test((v || "").trim());
+    }
+
+    function validUrl(v) {
+      const s = (v || "").trim();
+      return s.startsWith("https://") && s.length > "https://".length;
+    }
+
+    function validEN(v) {
+      return (v || "").trim().length > 0;
+    }
+
+    function showErr(msg) {
+      if (!errBox) return;
+      errBox.textContent = msg;
+      errBox.style.display = "block";
+    }
+
+    function clearErr() {
+      if (!errBox) return;
+      errBox.style.display = "none";
+    }
+
+    // live feedback (safe checks)
+    if (keyEl) keyEl.addEventListener("input", () => setBad(keyEl, !validKey(keyEl.value)));
+    if (urlEl) urlEl.addEventListener("input", () => setBad(urlEl, !validUrl(urlEl.value)));
+    if (enEl) enEl.addEventListener("input", () => setBad(enEl, !validEN(enEl.value)));
+
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        const kOk = validKey(keyEl ? keyEl.value : "");
+        const uOk = validUrl(urlEl ? urlEl.value : "");
+        const titleOk = validEN(titleEnEl2 ? titleEnEl2.value : "");
+        const enOk = validEN(enEl ? enEl.value : "");
+
+        setBad(titleEnEl2, !titleOk);
+        setBad(enEl, !enOk);
+
+        if (!kOk || !uOk || !titleOk || !enOk) {
+          e.preventDefault();
+
+          if (!kOk) showErr("Career Key must be snake_case (a-z, 0-9, underscore). Example: ux_researcher");
+          else if (!uOk) showErr("URL must start with https://");
+          else if (!titleOk) showErr("English career name (EN) is required.");
+          else showErr("English description (EN) is required.");
+
+          if (errBox) errBox.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else {
+          clearErr();
+        }
+      });
+    }
+  });
+</script>
+
+{% endblock %}

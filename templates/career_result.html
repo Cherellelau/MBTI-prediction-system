@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:900px;margin:0 auto;">
+  <h1>{{ t('career_title') }}</h1>
+
+  <div class="card" style="padding:14px;border-radius:14px;margin:12px 0;">
+    <b>{{ t('career_why_title') }}</b><br>
+    <span class="muted">{{ t('career_why_sub') }}</span><br><br>
+    <span>{{ t('career_why_' ~ type_code) }}</span>
+  </div>
+
+  <p class="muted" style="margin-top:6px;">
+    {{ t('career_for_type') }}: <b>{{ type_code }}</b>
+  </p>
+
+  {% if careers and careers|length > 0 %}
+  <ul style="margin-top:14px;line-height:1.6;">
+    {% for c in careers %}
+    <li style="margin-bottom:14px;">
+      <b>{{ (c.title or '').strip() or c.careerKey }}</b>
+      <span class="muted">{{ c.description or "" }}</span><br>
+      <a href="{{ c.url }}" target="_blank" rel="noopener noreferrer">
+        {{ t('career_view_link') }}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">{{ t('career_none') }}</p>
+  {% endif %}
+
+  <div style="margin-top:18px;">
+    <a class="btn" href="{{ url_for('timeline.timeline') }}">{{ t('nav_timeline') }}</a>
+  </div>
+</div>
+
+{% endblock %}

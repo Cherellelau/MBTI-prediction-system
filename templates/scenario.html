@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card" style="max-width:900px; margin:0 auto;">
+    <h2 class="h2">{{ t('scenario_q_progress').format(current=idx+1, total=total) }}</h2>
+
+    <p style="margin-top:10px;"><b>{{ q.scenarioText }}</b></p>
+
+    <span class="small muted" id="autoNextHint" style="margin-left:auto; text-align:right;">
+        {{ t('scenario_auto_next') }}
+    </span>
+
+    <form id="scenarioForm" method="post" action="{{ url_for('test.scenario_answer') }}" style="margin-top:16px;">
+        <input type="hidden" name="question_id" value="{{ q.questionID }}">
+        <input type="hidden" name="idx" value="{{ idx }}">
+        <input type="hidden" name="return_to_review" value="{{ 1 if return_to_review else 0 }}">
+
+        <div class="opt-list">
+            {% for opt in options %}
+            <label class="opt-item">
+                <input class="opt-radio" type="radio" name="option_id" value="{{ opt.optionID }}" {% if selected and
+                    (selected|int)==(opt.optionID|int) %}checked{% endif %}>
+                <span class="opt-text">{{ opt.optionText }}</span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <!-- Bottom navigation -->
+        <div style="margin-top:14px; display:flex; gap:16px; align-items:center;">
+
+            <!-- Previous (only active if not Question 1) -->
+            {% if idx > 0 %}
+            <a href="{{ url_for('test.scenario_back', idx=idx) }}" class="muted" style="text-decoration:none;">
+                {{ t('scenario_prev_btn') }}
+            </a>
+            {% else %}
+            <span class="muted" style="opacity:0.6;">
+                {{ t('scenario_prev_btn') }}
+            </span>
+            {% endif %}
+
+            <!-- Back to Home -->
+            <a href="{{ url_for('home') }}" id="backToHomeBtn" class="muted" style="text-decoration:none;">
+                {{ t('scenario_back_home_btn') }}
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("scenarioForm");
+        const radios = form.querySelectorAll('input[name="option_id"]');
+
+        radios.forEach(radio => {
+            radio.addEventListener("change", () => {
+                form.submit();
+            });
+        });
+
+        const backToHomeBtn = document.getElementById("backToHomeBtn");
+
+        if (backToHomeBtn) {
+            backToHomeBtn.addEventListener("click", function (e) {
+                let exitMessage = "Are you sure you want to exit the test? You are currently answering the test, and your progress may be lost.";
+                const lang = "{{ session.get('lang', 'EN') }}";
+
+                if (lang === "BM") {
+                    exitMessage = "Adakah anda pasti mahu keluar daripada ujian ini? Anda sedang menjawab ujian ini, dan kemajuan anda mungkin akan hilang.";
+                } else if (lang === "ZH") {
+                    exitMessage = "您确定要退出此测试吗？您当前正在作答，离开后当前进度可能会丢失。";
+                }
+
+                const confirmed = confirm(exitMessage);
+                if (!confirmed) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
+</script>
+
+{% endblock %}

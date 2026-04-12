@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="{% if current_lang == 'ZH' %}zh{% elif current_lang == 'BM' %}ms{% else %}en{% endif %}">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{ title if title else t('app_title') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body data-endpoint="{{ request.endpoint }}">
+    <header class="header">
+        <div class="brand">
+            <a href="{{ url_for('profile.home_page') }}" class="brand-link">{{ t('app_title') }}</a>
+        </div>
+
+        <nav class="nav">
+            {% if session.get("user_id") %}
+            <a href="{{ url_for('profile.home_page') }}">{{ t('nav_home') }}</a>
+            <a href="{{ url_for('test.test') }}">{{ t('nav_test') }}</a>
+            <a href="{{ url_for('timeline.timeline') }}">{{ t('nav_timeline') }}</a>
+            <a href="{{ url_for('profile.profile') }}">{{ t('nav_profile') }}</a>
+
+            {% if is_admin %}
+            <div class="dropdown" id="adminDropdown">
+                <button type="button" class="dropdown-btn" aria-haspopup="true" aria-expanded="false">
+                    {{ t('nav_admin') }} ▾
+                </button>
+
+                <div class="dropdown-menu" role="menu">
+                    <a class="dropdown-item" href="{{ url_for('admin.scenario_list') }}">
+                        {{ t('nav_admin_scenario') }}
+                    </a>
+
+                    <a class="dropdown-item" href="{{ url_for('admin.careers_list') }}">
+                        {{ t('nav_admin_career') }}
+                    </a>
+
+                    <a class="dropdown-item" href="{{ url_for('admin.admin_users_list') }}">
+                        {{ t('nav_admin_users') }}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('auth.logout') }}" class="inline">
+                <button class="linkbtn" type="submit">{{ t('nav_logout') }}</button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}">{{ t('nav_login') }}</a>
+            <a href="{{ url_for('auth.register') }}">{{ t('nav_register') }}</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    {% if not session.get("lang") %}
+    <div class="modal-backdrop">
+        <div class="modal">
+            <h2>{{ t('lang_title') }}</h2>
+            <p class="muted">{{ t('lang_note') }}</p>
+
+            <form method="POST" action="{{ url_for('set_language') }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+
+                <label>{{ t('preferred_language') }}</label>
+                <select name="lang" required>
+                    <option value="EN">{{ t('lang_en') }}</option>
+                    <option value="ZH">{{ t('lang_zh') }}</option>
+                    <option value="BM">{{ t('lang_bm') }}</option>
+                </select>
+
+                <button type="submit">{{ t('lang_save') }}</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flashwrap">
+            {% for cat, msg in messages %}
+            <div class="flash {{cat}}">{{ msg }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    {% if session.get("user_id") %}
+    <button id="backToTopBtn" class="back-to-top" type="button" aria-label="Back to top">↑</button>
+    {% endif %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const dd = document.getElementById("adminDropdown");
+            if (dd) {
+                const btn = dd.querySelector(".dropdown-btn");
+
+                const isTouch =
+                    window.matchMedia("(hover: none)").matches ||
+                    window.matchMedia("(pointer: coarse)").matches;
+
+                function close() {
+                    dd.classList.remove("open");
+                    btn.setAttribute("aria-expanded", "false");
+                }
+
+                if (isTouch) {
+                    btn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        dd.classList.toggle("open");
+                        btn.setAttribute("aria-expanded", dd.classList.contains("open") ? "true" : "false");
+                    });
+
+                    document.addEventListener("click", (e) => {
+                        if (!dd.contains(e.target)) close();
+                    });
+
+                    document.addEventListener("keydown", (e) => {
+                        if (e.key === "Escape") close();
+                    });
+                }
+            }
+
+            const btnTop = document.getElementById("backToTopBtn");
+            if (btnTop) {
+                function toggleTop() {
+                    if (window.scrollY > 250) btnTop.classList.add("show");
+                    else btnTop.classList.remove("show");
+                }
+
+                window.addEventListener("scroll", toggleTop, { passive: true });
+                toggleTop();
+
+                btnTop.addEventListener("click", () => {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                });
+            }
+        });
+    </script>
+
+</body>
+
+</html>

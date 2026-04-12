@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:1000px;margin:0 auto;">
+    <h1>Admin - Users</h1>
+
+    <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0;">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search name/email"
+            style="padding:10px;border:1px solid #e5e7eb;border-radius:10px;flex:1;min-width:240px;">
+        <button class="btn" type="submit">Search</button>
+        <a class="btn secondary" href="{{ url_for('admin.admin_users_list') }}">Clear</a>
+    </form>
+
+    <div style="overflow:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="text-align:left;border-bottom:1px solid #e5e7eb;">
+                    <th style="padding:10px 8px;">ID</th>
+                    <th style="padding:10px 8px;">Name</th>
+                    <th style="padding:10px 8px;">Email</th>
+                    <th style="padding:10px 8px;">Role</th>
+                    <th style="padding:10px 8px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:10px 8px;">{{ u.userID }}</td>
+                    <td style="padding:10px 8px;">{{ u.name }}</td>
+                    <td style="padding:10px 8px;">{{ u.email }}</td>
+                    <td style="padding:10px 8px;">
+                        {% if u.isAdmin|int == 1 %}Admin{% else %}User{% endif %}
+                    </td>
+                    <td style="padding:10px 8px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <a class="btn tl-btn-sm" href="{{ url_for('admin.admin_user_records', uid=u.userID) }}">View
+                            Records</a>
+                        <a class="btn tl-btn-sm tl-btn-danger"
+                            href="{{ url_for('admin.admin_reset_user_password', uid=u.userID) }}">Reset Password</a>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if users|length == 0 %}
+                <tr>
+                    <td colspan="5" style="padding:14px 8px;opacity:.7;">No users found.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

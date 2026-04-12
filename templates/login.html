@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ t('login_title') }}</h1>
+<form method="POST" action="{{ url_for('auth.login_post') }}" class="card">
+  <label>{{ t('email') }}</label>
+  <input name="email" type="email" required>
+
+  <label>{{ t('password') }}</label>
+  <div class="password-wrap">
+    <input id="login-password" name="password" type="password" required>
+  </div>
+
+  <button type="submit">{{ t('login_btn') }}</button>
+  <p class="muted">{{ t('no_account') }} <a href="{{ url_for('auth.register') }}">{{ t('register_here') }}</a>.</p>
+
+  <div style="margin-top:10px;">
+    <a href="{{ url_for('auth.forgot_password') }}" class="muted" style="text-decoration:none;">
+      {{ t('forgot_pw_link') if t('forgot_pw_link') != 'forgot_pw_link' else 'Forgot password?' }}
+    </a>
+  </div>
+</form>
+
+{% endblock %}

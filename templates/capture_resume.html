@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card" style="max-width: 860px; margin: 24px auto;">
+    <h1>{{ t("profile_onboarding_camera") }}</h1>
+
+    <p style="color:#6b7280; margin-bottom:8px;">
+        {{ t("capture_resume_subtitle") }}
+    </p>
+
+    <div id="captureResumeI18n" data-camera-access-failed="{{ t('camera_access_failed') }}"
+        data-camera-not-ready="{{ t('camera_not_ready') }}" data-capture-failed="{{ t('capture_failed') }}"
+        data-resume-capture-first="{{ t('resume_capture_first') }}"
+        data-resume-upload-failed="{{ t('resume_upload_failed') }}"></div>
+
+    <div style="display:grid; gap:16px;">
+        <video id="cameraPreview" autoplay playsinline
+            style="display:block; width:100%; max-height:420px; border-radius:16px; background:#111;"></video>
+
+        <canvas id="captureCanvas" style="display:none;"></canvas>
+
+        <img id="capturedPreview" alt="Captured resume preview"
+            style="display:none; width:100%; max-height:420px; object-fit:contain; border-radius:16px; border:1px solid #e5e7eb;" />
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button type="button" id="captureBtn" class="btn btn-primary">
+                {{ t("capture_resume_capture") }}
+            </button>
+
+            <button type="button" id="retakeBtn" class="btn btn-ghost" style="display:none;">
+                {{ t("capture_resume_retake") }}
+            </button>
+        </div>
+
+        <form method="POST" action="{{ url_for('profile.capture_resume_post') }}" id="captureResumeForm"
+            enctype="multipart/form-data">
+            <input type="file" name="resume_photo" id="resumePhotoInput" accept="image/*" style="display:none;">
+
+            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;">
+                <button type="submit" id="continueBtn" class="btn btn-primary" style="display:none;">
+                    {{ t("continue_button") if t("continue_button") != "continue_button" else "Continue" }}
+                </button>
+
+                <a href="{{ url_for('profile.profile_onboarding') }}" class="btn btn-ghost"
+                    style="text-decoration:none;">
+                    {{ t("back_button") }}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const i18nEl = document.getElementById("captureResumeI18n");
+        const I18N = {
+            camera_access_failed: i18nEl.dataset.cameraAccessFailed,
+            camera_not_ready: i18nEl.dataset.cameraNotReady,
+            capture_failed: i18nEl.dataset.captureFailed,
+            resume_capture_first: i18nEl.dataset.resumeCaptureFirst,
+            resume_upload_failed: i18nEl.dataset.resumeUploadFailed
+        };
+
+        const video = document.getElementById("cameraPreview");
+        const canvas = document.getElementById("captureCanvas");
+        const capturedPreview = document.getElementById("capturedPreview");
+
+        const captureBtn = document.getElementById("captureBtn");
+        const retakeBtn = document.getElementById("retakeBtn");
+        const continueBtn = document.getElementById("continueBtn");
+        const captureResumeForm = document.getElementById("captureResumeForm");
+
+        let stream = null;
+        let currentFacingMode = "environment";
+        let capturedBlob = null;
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            video.srcObject = null;
+        }
+
+        function resetToCameraMode() {
+            video.style.display = "block";
+            capturedPreview.style.display = "none";
+
+            captureBtn.style.display = "inline-block";
+            retakeBtn.style.display = "none";
+            continueBtn.style.display = "none";
+        }
+
+        function resetToPreviewMode(previewUrl) {
+            capturedPreview.src = previewUrl;
+            capturedPreview.style.display = "block";
+            video.style.display = "none";
+
+            captureBtn.style.display = "none";
+            retakeBtn.style.display = "inline-block";
+            continueBtn.style.display = "inline-block";
+        }
+
+        async function startCamera(facingMode = currentFacingMode) {
+            try {
+                stopCamera();
+
+                const constraints = {
+                    video: {
+                        facingMode: { ideal: facingMode },
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    },
+                    audio: false
+                };
+
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                await video.play();
+
+                currentFacingMode = facingMode;
+                resetToCameraMode();
+            } catch (err) {
+                console.error("Error starting camera:", err);
+
+                try {
+                    stopCamera();
+
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: false
+                    });
+
+                    video.srcObject = stream;
+                    await video.play();
+
+                    resetToCameraMode();
+                } catch (fallbackErr) {
+                    console.error("Fallback camera failed:", fallbackErr);
+                    alert(I18N.camera_access_failed);
+                }
+            }
+        }
+
+        function capturePhoto() {
+            if (!video.srcObject || !video.videoWidth || !video.videoHeight) {
+                alert(I18N.camera_not_ready);
+                return;
+            }
+
+            const maxWidth = 1800;
+            const scale = Math.min(1, maxWidth / video.videoWidth);
+
+            const targetWidth = Math.floor(video.videoWidth * scale);
+            const targetHeight = Math.floor(video.videoHeight * scale);
+
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
+
+            canvas.toBlob(function (blob) {
+                if (!blob) {
+                    alert(I18N.capture_failed);
+                    return;
+                }
+
+                capturedBlob = blob;
+
+                if (capturedPreview.dataset.objectUrl) {
+                    URL.revokeObjectURL(capturedPreview.dataset.objectUrl);
+                }
+
+                const previewUrl = URL.createObjectURL(blob);
+                capturedPreview.dataset.objectUrl = previewUrl;
+
+                resetToPreviewMode(previewUrl);
+                stopCamera();
+            }, "image/jpeg", 0.95);
+        }
+
+        captureBtn.addEventListener("click", function () {
+            capturePhoto();
+        });
+
+        retakeBtn.addEventListener("click", async function () {
+            capturedBlob = null;
+
+            if (capturedPreview.dataset.objectUrl) {
+                URL.revokeObjectURL(capturedPreview.dataset.objectUrl);
+                delete capturedPreview.dataset.objectUrl;
+            }
+
+            capturedPreview.src = "";
+            await startCamera(currentFacingMode);
+        });
+
+        captureResumeForm.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            if (!capturedBlob) {
+                alert(I18N.resume_capture_first);
+                return;
+            }
+
+            continueBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append("resume_photo", capturedBlob, "captured_resume.jpg");
+
+                const response = await fetch(captureResumeForm.action, {
+                    method: "POST",
+                    body: formData,
+                    credentials: "same-origin"
+                });
+
+                const text = await response.text();
+                document.open();
+                document.write(text);
+                document.close();
+            } catch (err) {
+                console.error("Upload failed:", err);
+                continueBtn.disabled = false;
+                alert(I18N.resume_upload_failed);
+            }
+        });
+
+        window.addEventListener("beforeunload", function () {
+            stopCamera();
+
+            if (capturedPreview.dataset.objectUrl) {
+                URL.revokeObjectURL(capturedPreview.dataset.objectUrl);
+            }
+        });
+
+        startCamera(currentFacingMode);
+    });
+</script>
+
+{% endblock %}

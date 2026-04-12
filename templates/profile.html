@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ t('profile_title') }}</h1>
+
+<div class="grid">
+  <div class="card">
+    <h2 class="h2">{{ t('update_profile') }}</h2>
+
+    <form method="POST" action="{{ url_for('profile.profile_update') }}">
+      <label>{{ t('name') }}</label>
+      <input name="name" type="text" value="{{ user['name'] or '' }}">
+
+      <label>{{ t('email') }}</label>
+      <input name="email" type="email" value="{{ user['email'] }}" required>
+
+      <label>{{ t('preferred_language') }}</label>
+      <select name="preferred_language">
+        <option value="EN" {% if current_lang=="EN" %}selected{% endif %}>{{ t('lang_en') }}</option>
+        <option value="ZH" {% if current_lang=="ZH" %}selected{% endif %}>{{ t('lang_zh') }}</option>
+        <option value="BM" {% if current_lang=="BM" %}selected{% endif %}>{{ t('lang_bm') }}</option>
+      </select>
+
+      <input type="hidden" name="next" value="{{ request.args.get('next') or request.referrer or url_for('test') }}">
+
+      <button type="submit">{{ t('save_changes') }}</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 class="h2">{{ t('change_password') }}</h2>
+
+    <form method="POST" action="{{ url_for('profile.profile_change_password') }}">
+      <label>{{ t('current_password') }}</label>
+      <input name="current_password" type="password" required>
+
+      <label>{{ t('new_password') }}</label>
+      <input name="new_password" type="password" required>
+
+      <label>{{ t('confirm_new_password') }}</label>
+      <input name="confirm_password" type="password" required>
+
+      <button type="submit">{{ t('update_password') }}</button>
+      <p class="muted">{{ t('min6') }}</p>
+    </form>
+  </div>
+</div>
+
+<div class="card" style="margin-top: 24px;">
+  <h2 class="h2">{{ t("initial_profile_title") }}</h2>
+
+  {% if user_profile %}
+  <p class="muted" style="margin-bottom:16px;">
+    {{ t("initial_profile_source") }}:
+    <strong>
+      {% if user_profile["profileSource"] == "resume" %}
+      {{ t("initial_profile_source_resume") }}
+      {% else %}
+      {{ t("initial_profile_source_manual") }}
+      {% endif %}
+    </strong>
+  </p>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    <div>
+      <label>{{ t("profile_age_range") }}</label>
+      <div class="input" style="background:#f9fafb;">{{ user_profile["ageRange"] or "-" }}</div>
+    </div>
+
+    <div>
+      <label>{{ t("profile_education_level") }}</label>
+      <div class="input" style="background:#f9fafb;">{{ user_profile["educationLevel"] or "-" }}</div>
+    </div>
+
+    <div>
+      <label>{{ t("profile_field_of_study") }}</label>
+      <div class="input" style="background:#f9fafb;">{{ user_profile["fieldOfStudy"] or "-" }}</div>
+    </div>
+
+    <div>
+      <label>{{ t("profile_current_occupation") }}</label>
+      <div class="input" style="background:#f9fafb;">{{ user_profile["currentOccupation"] or "-" }}</div>
+    </div>
+
+    <div style="grid-column:1 / -1;">
+      <label>{{ t("profile_skills") }}</label>
+      <div class="input" style="background:#f9fafb; min-height:72px; white-space:pre-wrap;">{{ user_profile["skills"] or
+        "-" }}</div>
+    </div>
+
+    <div style="grid-column:1 / -1;">
+      <label>{{ t("profile_interests") }}</label>
+      <div class="input" style="background:#f9fafb; min-height:72px; white-space:pre-wrap;">{{ user_profile["interests"]
+        or "-" }}</div>
+    </div>
+
+    <div>
+      <label>{{ t("profile_preferred_work_style") }}</label>
+      <div class="input" style="background:#f9fafb;">{{ user_profile["preferredWorkStyle"] or "-" }}</div>
+    </div>
+
+    <div style="grid-column:1 / -1;">
+      <label>{{ t("profile_career_goal") }}</label>
+      <div class="input" style="background:#f9fafb; min-height:72px; white-space:pre-wrap;">{{
+        user_profile["careerGoal"] or "-" }}</div>
+    </div>
+  </div>
+  {% else %}
+  <p class="muted">{{ t("initial_profile_empty") }}</p>
+  {% endif %}
+</div>
+{% endblock %}
