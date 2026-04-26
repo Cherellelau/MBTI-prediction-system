@@ -28,11 +28,10 @@ from werkzeug.utils import secure_filename
 from services.resume_service import (
     allowed_resume_extension,
     get_file_ext,
-    convert_pdf_to_images,
-    extract_text_from_resume_pages,
     parse_resume_profile,
     validate_resume_image,
     validate_resume_text_only,
+    extract_text_from_resume_file,
 )
 
 profile_bp = Blueprint("profile", __name__)
@@ -603,7 +602,6 @@ def upload_resume_page():
     session["resume_entry_mode"] = "upload"
     return render_template("upload_resume.html")
 
-
 @profile_bp.post("/profile/upload-resume")
 @login_required
 def upload_resume_post():
@@ -629,22 +627,20 @@ def upload_resume_post():
     image_paths = []
 
     try:
-        if ext in [".png", ".jpg", ".jpeg", ".webp"]:
-            image_paths = [save_path]
-        elif ext == ".pdf":
-            image_paths = convert_pdf_to_images(save_path)
-        else:
-            flash(t_py("resume_upload_invalid_type"), "error")
-            return redirect(url_for("profile.upload_resume_page"))
-
-        raw_text = extract_text_from_resume_pages(image_paths)
+        # Fast path: let resume_service decide the best extraction method
+        # - PDF: direct text first, OCR only if needed
+        # - Image: OCR normally
+        raw_text = extract_text_from_resume_file(save_path, lang="eng")
         validation = validate_resume_text_only(raw_text)
 
         if not validation["valid"]:
             error_key = validation.get("error_key", "")
 
-            if os.path.exists(save_path):
-                os.remove(save_path)
+            try:
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+            except Exception:
+                pass
 
             for path in image_paths:
                 try:
@@ -679,11 +675,27 @@ def upload_resume_post():
         session["resume_raw_text"] = raw_text
         session["resume_profile_source"] = "resume"
         session["resume_entry_mode"] = "upload"
+
         return redirect(url_for("profile.preview_resume_text"))
 
     except Exception as e:
-        flash(f"OCR failed: {e}", "error")
+        error_msg = str(e).lower()
+
+        try:
+            if os.path.exists(save_path):
+                os.remove(save_path)
+        except Exception:
+            pass
+
+        if "invalid or corrupted pdf" in error_msg:
+            flash("This PDF file is corrupted or invalid. Please upload another PDF or save it again as PDF.", "error")
+        elif "unable to read this pdf" in error_msg or "unable to get page count" in error_msg:
+            flash("This PDF cannot be read properly. Please try another PDF or upload a JPG/PNG resume instead.", "error")
+        else:
+            flash(f"OCR failed: {e}", "error")
+
         return redirect(url_for("profile.upload_resume_page"))
+
 
 @profile_bp.get("/profile/preview-resume-text")
 @login_required
@@ -867,7 +879,7 @@ def capture_resume_post():
         original_name = secure_filename(file.filename)
         ext = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else "jpg"
 
-        allowed_ext = {"jpg", "jpeg", "png", "webp"}
+        allowed_ext = {"jpg", "jpeg", "png"}
         if ext not in allowed_ext:
             flash(t_py("msg_resume_invalid_format"), "error")
             return redirect(url_for("profile.capture_resume_page", fresh=1))
