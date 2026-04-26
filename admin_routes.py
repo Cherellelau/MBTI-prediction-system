@@ -31,6 +31,7 @@ def clear_scenario_cache():
     for k in ["scenario_snapshot", "scenario_qids", "scenario_gids",
               "scenario_answers", "scenario_idx", "scenario_snapshot_lang"]:
         session.pop(k, None)
+
     session.modified = True
 
 # -----------------------------
@@ -168,7 +169,7 @@ def scenario_edit(qid):
         opts=opts
     )
 
-# ✅ NEW: Save Question + All Options (A–D) in ONE submit
+# NEW: Save Question + All Options (A–D) in ONE submit
 @admin_bp.route("/admin/scenario/<int:qid>/edit/save-all", methods=["POST"])
 @admin_required
 def scenario_edit_save_all(qid):
@@ -216,7 +217,7 @@ def scenario_edit_save_all(qid):
         # EN required
         option_text_en = (request.form.get(f"optionText_{k}") or "").strip()
 
-        # BM/ZH optional (from your template)
+        # BM/ZH optional 
         option_text_bm = (request.form.get(f"optionTextBM_{k}") or "").strip()
         option_text_zh = (request.form.get(f"optionTextZH_{k}") or "").strip()
 
@@ -327,7 +328,7 @@ def careers_create():
     # you don't have sortOrder input in HTML, so default safely
     sort_order = safe_int(request.form.get("sortOrder"), 1)
 
-    # ✅ NEW: titles
+    # NEW: titles
     title_en = (request.form.get("title_en") or "").strip()
     title_bm = (request.form.get("title_bm") or "").strip()
     title_zh = (request.form.get("title_zh") or "").strip()
