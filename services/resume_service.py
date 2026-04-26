@@ -25,20 +25,33 @@ def get_file_ext(path: str) -> str:
 
 
 def allowed_resume_extension(filename: str) -> bool:
-    return get_file_ext(filename) in {".pdf", ".png", ".jpg", ".jpeg", ".webp"}
+    return get_file_ext(filename) in {".pdf", ".png", ".jpg", ".jpeg"}
 
 
 # ======================================
 # PDF helpers
 # ======================================
-def convert_pdf_to_images(pdf_path: str, dpi: int = 300) -> List[str]:
+def convert_pdf_to_images(pdf_path: str, dpi: int = 300, max_pages: int = 2) -> List[str]:
     """
-    Convert each page of a PDF into PNG images.
+    Convert only the first few pages of a PDF into PNG images.
+    Most resumes are 1-2 pages, so this speeds up OCR a lot.
     """
     if not os.path.exists(pdf_path):
         raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
-    pages = convert_from_path(pdf_path, dpi=dpi, poppler_path=POPPLER_PATH)
+    try:
+        pages = convert_from_path(
+            pdf_path,
+            dpi=dpi,
+            poppler_path=POPPLER_PATH,
+            first_page=1,
+            last_page=max_pages,
+        )
+    except Exception as e:
+        raise ValueError(
+            "Invalid or unreadable PDF. Please upload a valid resume PDF."
+        ) from e
+
     output_paths: List[str] = []
 
     for i, page in enumerate(pages, start=1):
@@ -47,6 +60,20 @@ def convert_pdf_to_images(pdf_path: str, dpi: int = 300) -> List[str]:
         output_paths.append(out_path)
 
     return output_paths
+
+def get_pdf_page_count(pdf_path: str) -> int:
+    """
+    Return PDF page count.
+    """
+    if not os.path.exists(pdf_path):
+        raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            return len(pdf.pages)
+    except Exception as e:
+        raise ValueError("Unable to read PDF page count.") from e
+
 
 
 def extract_text_from_pdf_direct(pdf_path: str) -> str:
@@ -386,11 +413,15 @@ def extract_text_from_resume_file(file_path: str, lang: str = "eng") -> str:
     """
     ext = get_file_ext(file_path)
 
-    if ext in {".png", ".jpg", ".jpeg", ".webp"}:
+    if ext in {".png", ".jpg", ".jpeg"}:
         return extract_text_from_resume_pages([file_path], lang=lang)
 
     if ext == ".pdf":
-        # First try direct PDF text extraction
+        page_count = get_pdf_page_count(file_path)
+
+        if page_count > 3:
+            raise ValueError("Resume PDF is too long. Please upload a resume with 3 pages or fewer.")
+
         try:
             direct_text = extract_text_from_pdf_direct(file_path)
             if is_meaningful_pdf_text(direct_text):
@@ -398,12 +429,10 @@ def extract_text_from_resume_file(file_path: str, lang: str = "eng") -> str:
         except Exception:
             pass
 
-        # Fallback to OCR
-        image_paths = convert_pdf_to_images(file_path)
+        image_paths = convert_pdf_to_images(file_path, max_pages=2)
         return extract_text_from_resume_pages(image_paths, lang=lang)
 
-    raise ValueError("Unsupported resume file type. Only PDF, PNG, JPG, JPEG, WEBP are allowed.")
-
+    raise ValueError("Unsupported resume file type. Only PDF, PNG, JPG, and JPEG are allowed.")
 
 # ======================================
 # Resume relevance validation
@@ -430,16 +459,114 @@ RESUME_KEYWORDS = {
 }
 
 NON_RESUME_KEYWORDS = {
-    "menu", "receipt", "invoice", "promotion", "discount", "chapter",
-    "assignment", "exam", "question", "poster", "advertisement", "welcome",
-    "total", "price", "rm", "official receipt", "bill",
-    "lecture", "tutorial", "lab", "semester", "student id", "course code",
-    "reference list", "bibliography", "introduction", "conclusion",
-    "abstract", "appendix", "table of contents", "figure", "diagram",
-    "answer", "mark", "marks", "score", "test paper", "worksheet",
-    "homework", "exercise", "university assignment", "class note", "notes"
-}
+    # =========================
+    # English
+    # =========================
+    "menu", "receipt", "invoice", "promotion", "discount", "voucher", "coupon",
+    "bill", "official receipt", "payment", "cashier", "subtotal", "tax", "sst",
+    "service charge", "price", "total", "grand total", "amount due", "change",
+    "payment method", "transaction", "order number", "table number", "delivery fee",
 
+    "chapter", "assignment", "exam", "test", "quiz", "question", "answer",
+    "worksheet", "homework", "exercise", "lab", "tutorial", "lecture",
+    "semester", "student id", "course code", "class note", "notes",
+    "university assignment", "group assignment", "individual assignment",
+    "midterm", "final exam", "past year", "sample answer", "mark", "marks",
+    "score", "grading", "rubric", "assessment", "submission", "deadline",
+
+    "abstract", "introduction", "conclusion", "appendix", "bibliography",
+    "reference list", "literature review", "table of contents", "figure",
+    "diagram", "chart", "graph", "methodology", "results", "discussion",
+    "research paper", "journal", "citation", "references",
+
+    "poster", "advertisement", "brochure", "flyer", "banner", "pamphlet",
+    "catalog", "promotion poster", "event poster", "welcome", "grand opening",
+    "sale", "special offer", "limited time offer", "buy 1 free 1",
+
+    "attendance", "announcement", "notice", "memo", "circular", "schedule",
+    "timetable", "agenda", "meeting minutes", "invitation", "registration form",
+    "feedback form", "survey form", "application form", "consent form",
+
+    "identity card", "ic number", "passport copy", "bank statement",
+    "utility bill", "medical report", "prescription", "certificate",
+    "birth certificate", "marriage certificate", "license", "permit",
+
+    "book", "storybook", "novel", "magazine", "newspaper", "comic",
+    "product manual", "user guide", "instruction manual", "warranty card",
+
+    # =========================
+    # Malay
+    # =========================
+    "resit", "bil", "invois", "promosi", "diskaun", "baucar", "kupon",
+    "resit rasmi", "bayaran", "juruwang", "jumlah kecil", "cukai", "sst",
+    "caj perkhidmatan", "harga", "jumlah", "jumlah keseluruhan",
+    "amaun perlu dibayar", "baki", "kaedah pembayaran", "transaksi",
+    "nombor pesanan", "nombor meja", "caj penghantaran",
+
+    "bab", "tugasan", "peperiksaan", "ujian", "kuiz", "soalan", "jawapan",
+    "lembaran kerja", "kerja rumah", "latihan", "makmal", "tutorial", "kuliah",
+    "semester", "id pelajar", "kod kursus", "nota kelas", "nota",
+    "tugasan universiti", "tugasan kumpulan", "tugasan individu",
+    "pertengahan semester", "peperiksaan akhir", "soalan tahun lepas",
+    "skema jawapan", "markah", "pemarkahan", "rubrik", "penilaian",
+    "penghantaran", "tarikh akhir",
+
+    "abstrak", "pengenalan", "kesimpulan", "lampiran", "bibliografi",
+    "senarai rujukan", "ulasan literatur", "isi kandungan", "rajah",
+    "diagram", "carta", "graf", "metodologi", "hasil", "perbincangan",
+    "kertas penyelidikan", "jurnal", "sitasi", "rujukan",
+
+    "poster", "iklan", "brosur", "risalah", "sepanduk", "pamflet",
+    "katalog", "poster promosi", "poster acara", "selamat datang",
+    "jualan", "tawaran khas", "tawaran masa terhad", "beli 1 percuma 1",
+
+    "kehadiran", "pengumuman", "notis", "memo", "pekeliling", "jadual",
+    "jadual waktu", "agenda", "minit mesyuarat", "jemputan",
+    "borang pendaftaran", "borang maklum balas", "borang tinjauan",
+    "borang permohonan", "borang persetujuan",
+
+    "kad pengenalan", "nombor ic", "salinan pasport", "penyata bank",
+    "bil utiliti", "laporan perubatan", "preskripsi", "sijil",
+    "sijil kelahiran", "sijil perkahwinan", "lesen", "permit",
+
+    "buku", "novel", "majalah", "surat khabar", "komik",
+    "manual produk", "panduan pengguna", "manual arahan", "kad waranti",
+
+    # =========================
+    # Mandarin
+    # =========================
+    "收据", "发票", "账单", "促销", "折扣", "优惠券", "代金券",
+    "正式收据", "付款", "收银员", "小计", "税", "服务费", "价格",
+    "总额", "总计", "应付金额", "找零", "付款方式", "交易",
+    "订单号", "桌号", "配送费",
+
+    "章节", "作业", "考试", "测验", "小考", "问题", "答案",
+    "练习纸", "功课", "练习", "实验", "辅导课", "讲课",
+    "学期", "学生证", "课程代码", "课堂笔记", "笔记",
+    "大学作业", "小组作业", "个人作业", "期中考试", "期末考试",
+    "历年试题", "参考答案", "分数", "评分", "评分标准", "评估",
+    "提交", "截止日期",
+
+    "摘要", "引言", "介绍", "结论", "附录", "参考书目",
+    "参考文献", "文献综述", "目录", "图表", "图", "示意图",
+    "表格", "统计图", "方法论", "结果", "讨论", "研究论文",
+    "期刊", "引用", "文献",
+
+    "海报", "广告", "宣传册", "传单", "横幅", "小册子",
+    "目录册", "促销海报", "活动海报", "欢迎", "开业",
+    "特价", "限时优惠", "买一送一",
+
+    "出席", "公告", "通知", "备忘录", "通告", "时间表",
+    "议程", "会议记录", "邀请函", "报名表", "反馈表",
+    "调查表", "申请表", "同意书",
+
+    "身份证", "身份证号码", "护照副本", "银行对账单",
+    "水电单", "医疗报告", "处方", "证书", "出生证明",
+    "结婚证书", "执照", "许可证",
+
+    "书籍", "小说", "杂志", "报纸", "漫画",
+    "产品手册", "用户指南", "说明书", "保修卡"
+}
 
 def validate_resume_text_relevance(text: str) -> Dict[str, object]:
     clean_text = (text or "").strip()
@@ -723,24 +850,33 @@ def validate_resume_text_only(raw_text: str) -> Dict[str, object]:
 
     relevance = validate_resume_text_relevance(text)
 
-    if not relevance["valid"]:
-        resume_kw_count = len(relevance.get("resume_keywords_found", []))
-        non_resume_kw_count = len(relevance.get("non_resume_keywords_found", []))
-        char_count = readability.get("char_count", 0)
+    # define these BEFORE using them
+    resume_kw_count = len(relevance.get("resume_keywords_found", []))
+    non_resume_kw_count = len(relevance.get("non_resume_keywords_found", []))
+    char_count = readability.get("char_count", 0)
 
-    if non_resume_kw_count >= 1 and resume_kw_count == 0 and char_count >= 100:
+    if not relevance["valid"]:
+        if non_resume_kw_count >= 1 and resume_kw_count == 0 and char_count >= 100:
+            return {
+                "valid": False,
+                "error_key": "resume_not_relevant",
+                "message": "The file does not appear to be a resume.",
+                "relevance": relevance,
+                "readability": readability,
+            }
+
         return {
             "valid": False,
-            "error_key": "resume_not_relevant",
-            "message": "The file does not appear to be a resume.",
+            "error_key": CAPTURE_QUALITY_ERROR_KEY,
+            "message": CAPTURE_QUALITY_ERROR_MESSAGE,
             "relevance": relevance,
             "readability": readability,
         }
 
     return {
-        "valid": False,
-        "error_key": CAPTURE_QUALITY_ERROR_KEY,
-        "message": CAPTURE_QUALITY_ERROR_MESSAGE,
+        "valid": True,
+        "error_key": "",
+        "message": "",
         "relevance": relevance,
         "readability": readability,
     }
