@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from functools import wraps
+import time
 from io import BytesIO
 
 from flask import (
@@ -335,12 +336,25 @@ def build_scenario_display(payload: dict, lang: str) -> str:
 @result_bp.get("/result")
 @login_required
 def result_page():
+    t0 = time.perf_counter()
+
     pending = get_pending_or_none()
+    print(f"[TIMING] get_pending_or_none: {time.perf_counter() - t0:.4f}s")
+
     if not pending:
         flash(t_py("msg_no_pending"), "warning")
         return redirect(url_for("test.test"))
 
-    return render_template("result.html", pending=pending)
+    t1 = time.perf_counter()
+    show_back_preview = bool(pending.get("scenario_rows"))
+    resp = render_template(
+        "result.html",
+        pending=pending,
+        show_back_preview=show_back_preview
+    )
+    print(f"[TIMING] render result.html: {time.perf_counter() - t1:.4f}s")
+    print(f"[TIMING] result_page total: {time.perf_counter() - t0:.4f}s")
+    return resp
 
 
 @result_bp.post("/result/confirm")
