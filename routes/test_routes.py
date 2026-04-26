@@ -1,4 +1,5 @@
 from functools import wraps
+import time
 
 from flask import (
     Blueprint,
@@ -12,11 +13,11 @@ from flask import (
 
 from db import (
     get_user_profile_by_user_id,
-    list_scenario_questions,
-    list_options_for_question,
+    list_scenario_questions_with_options,
 )
 from i18n import TRANSLATIONS
 from services.prediction_service import (
+    ml_predict_top3_with_profile,
     store_pending_prediction,
     scores_to_mbti,
     confidence_from_scores,
@@ -71,23 +72,62 @@ def user_profile_completed(user_id: int) -> bool:
 
 
 # ======================================
-# Main test entry
+# Scenario cache helpers
 # ======================================
-@test_bp.get("/test")
-@login_required
-def test():
-    if not user_profile_completed(session["user_id"]):
-        return redirect(url_for("profile.profile_manual"))
+def get_scenario_bank(lang: str):
+    """
+    Cache all scenario questions+options by language in server memory.
+    This avoids repeated DB queries and does NOT bloat Flask session cookies.
+    """
+    lang = (lang or "EN").upper()
+    raw_qs = list_scenario_questions_with_options(lang=lang)
 
-    return render_template("test.html")
+    cleaned = []
+    for q in raw_qs:
+        item = dict(q)
+        qid = int(item["questionID"])
+
+        cleaned_options = []
+        for o in item.get("options", []):
+            od = dict(o)
+            cleaned_options.append({
+                "optionID": int(od["optionID"]),
+                "questionID": int(od.get("questionID", qid)),
+                "optionText": (od.get("optionText") or "").strip(),
+                "optionKey": (od.get("optionKey") or "").strip().upper(),
+                "EIScore": int(od.get("EIScore", 0) or 0),
+                "SNScore": int(od.get("SNScore", 0) or 0),
+                "TFScore": int(od.get("TFScore", 0) or 0),
+                "JPScore": int(od.get("JPScore", 0) or 0),
+            })
+
+        cleaned.append({
+            "questionID": qid,
+            "groupID": int(item.get("groupID") or qid),
+            "scenarioText": item.get("scenarioText", ""),
+            "category": item.get("categoryName") or item.get("category") or "",
+            "options": cleaned_options,
+        })
+
+    return cleaned
 
 
-# ======================================
-# Scenario helpers
-# ======================================
-def predict_top3_from_snapshot(snapshot: list[dict], answers: dict, profile_context: dict | None = None) -> tuple[list[tuple[str, float]], dict]:
+def get_scenario_by_qid(lang: str, qid: int):
+    bank = get_scenario_bank(lang)
+    return next((q for q in bank if int(q["questionID"]) == int(qid)), None)
+
+
+def get_snapshot_from_qids(lang: str, qids):
+    qid_set = {int(x) for x in qids}
+    bank = get_scenario_bank(lang)
+    return [q for q in bank if int(q["questionID"]) in qid_set]
+
+
+def predict_top3_from_snapshot(snapshot, answers, profile_context=None):
+    print("[DEBUG] predict_top3_from_snapshot start", flush=True)
+
     ei = sn = tf = jp = 0
-    raw_answers: list[dict] = []
+    raw_answers = []
 
     for q in (snapshot or []):
         qid = int(q.get("questionID", 0))
@@ -96,7 +136,11 @@ def predict_top3_from_snapshot(snapshot: list[dict], answers: dict, profile_cont
 
         gid = int(q.get("groupID") or qid)
 
-        oid = answers.get(str(qid))
+        saved = answers.get(str(qid))
+        if not saved:
+            continue
+
+        oid = saved.get("optionID")
         if oid is None:
             continue
 
@@ -134,7 +178,11 @@ def predict_top3_from_snapshot(snapshot: list[dict], answers: dict, profile_cont
             "optionKey": key
         })
 
+    print("[DEBUG] finished score accumulation", flush=True)
+
     profile_scores = score_profile_mbti(profile_context)
+    print(f"[DEBUG] profile_scores: {profile_scores}", flush=True)
+
     combined_scores = combine_profile_with_dimension_scores(
         {
             "EI": ei,
@@ -145,6 +193,7 @@ def predict_top3_from_snapshot(snapshot: list[dict], answers: dict, profile_cont
         profile_scores,
         profile_weight=0.4
     )
+    print(f"[DEBUG] combined_scores: {combined_scores}", flush=True)
 
     ei = combined_scores["EI"]
     sn = combined_scores["SN"]
@@ -153,19 +202,34 @@ def predict_top3_from_snapshot(snapshot: list[dict], answers: dict, profile_cont
 
     t1 = scores_to_mbti(ei, sn, tf, jp)
     c1 = confidence_from_scores(ei, sn, tf, jp)
+    print(f"[DEBUG] t1={t1}, c1={c1}", flush=True)
 
-    t2 = mutate_mbti_one_step(t1)
-    t3 = mutate_mbti_one_step(t2)
+    # generate 2 alternative types by flipping different positions
+    def flip_at(code, pos):
+        pairs = {
+            0: {"E": "I", "I": "E"},
+            1: {"S": "N", "N": "S"},
+            2: {"T": "F", "F": "T"},
+            3: {"J": "P", "P": "J"},
+        }
+        ch = code[pos]
+        new_ch = pairs[pos].get(ch, ch)
+        return code[:pos] + new_ch + code[pos + 1:]
+
+    candidates = [
+        t1,
+        flip_at(t1, 0),
+        flip_at(t1, 1),
+        flip_at(t1, 2),
+        flip_at(t1, 3),
+    ]
 
     uniq = []
-    for t in [t1, t2, t3]:
+    for t in candidates:
         if t not in uniq:
             uniq.append(t)
-
-    while len(uniq) < 3:
-        nxt = mutate_mbti_one_step(uniq[-1])
-        if nxt not in uniq:
-            uniq.append(nxt)
+        if len(uniq) == 3:
+            break
 
     c2 = round(max(0.45, c1 - 0.12), 2)
     c3 = round(max(0.40, c2 - 0.08), 2)
@@ -186,7 +250,45 @@ def predict_top3_from_snapshot(snapshot: list[dict], answers: dict, profile_cont
         "profile_scores": profile_scores
     }
 
+    print("[DEBUG] predict_top3_from_snapshot end", flush=True)
     return top3, raw_payload
+
+
+# ======================================
+# Normal text test
+# ======================================
+@test_bp.get("/test")
+@login_required
+def test():
+    if not user_profile_completed(session["user_id"]):
+        return redirect(url_for("profile.profile_manual"))
+
+    return render_template("test.html")
+
+
+@test_bp.post("/submit")
+@login_required
+def submit():
+    raw_text = request.form.get("raw_text", "").strip()
+    if not raw_text:
+        flash(t_py("msg_enter_text"), "error")
+        return redirect(url_for("test.test"))
+
+    user_id = session["user_id"]
+    profile_context = build_profile_context_for_prediction(user_id)
+
+    top3 = ml_predict_top3_with_profile(
+        raw_text,
+        profile_context=profile_context
+    )
+
+    store_pending_prediction(
+        top3,
+        raw_text=raw_text,
+        profile_context=profile_context
+    )
+
+    return redirect(url_for("result.result_page"))
 
 
 # ======================================
@@ -195,23 +297,25 @@ def predict_top3_from_snapshot(snapshot: list[dict], answers: dict, profile_cont
 @test_bp.get("/scenario")
 @login_required
 def scenario_start():
-    if not user_profile_completed(session["user_id"]):
-        return redirect(url_for("profile.profile_manual"))
-
     lang = session.get("lang", "EN").upper()
 
     for k in [
         "scenario_qids",
         "scenario_answers",
         "scenario_idx",
-        "scenario_snapshot_lang"
+        "scenario_snapshot_lang",
     ]:
         session.pop(k, None)
 
-    qs = [dict(q) for q in list_scenario_questions(lang=lang)]
+    try:
+        get_scenario_bank.cache_clear()
+    except Exception:
+        pass
+
+    qs = get_scenario_bank(lang)
     if not qs:
-        flash(t_py("scenario_no_questions") if t_py("scenario_no_questions") != "scenario_no_questions" else "No scenario questions found in DB.", "error")
-        return redirect(url_for("profile.home_page"))
+        flash("No scenario questions found in DB.", "error")
+        return redirect(url_for("test.test"))
 
     session["scenario_qids"] = [int(q["questionID"]) for q in qs]
     session["scenario_snapshot_lang"] = lang
@@ -221,7 +325,6 @@ def scenario_start():
 
     return redirect(url_for("test.scenario_question", idx=0))
 
-
 # ======================================
 # Scenario question page
 # ======================================
@@ -229,6 +332,7 @@ def scenario_start():
 @login_required
 def scenario_question(idx: int):
     lang = session.get("lang", "EN").upper()
+
     if session.get("scenario_snapshot_lang") != lang:
         return redirect(url_for("test.scenario_start"))
 
@@ -240,14 +344,19 @@ def scenario_question(idx: int):
         return redirect(url_for("test.scenario_preview"))
 
     qid = int(qids[idx])
+    item = get_scenario_by_qid(lang, qid)
 
-    qs = [dict(q) for q in list_scenario_questions(lang=lang)]
-    item = next((q for q in qs if int(q["questionID"]) == qid), None)
     if not item:
         return redirect(url_for("test.scenario_start"))
 
-    options = [dict(o) for o in list_options_for_question(qid, lang)]
-    selected = (session.get("scenario_answers") or {}).get(str(qid))
+    options = item.get("options", [])
+    selected_saved = (session.get("scenario_answers") or {}).get(str(qid))
+    selected = None
+
+    if isinstance(selected_saved, dict):
+        selected = selected_saved.get("optionID")
+    else:
+        selected = selected_saved
 
     return_to_review = request.args.get("return_to_review", "0") == "1"
 
@@ -286,8 +395,46 @@ def scenario_answer():
         flash(t_py("scenario_choose_one"), "error")
         return redirect(url_for("test.scenario_question", idx=idx))
 
+    try:
+        qid_int = int(qid)
+        oid_int = int(oid)
+    except Exception:
+        flash(t_py("scenario_choose_one"), "error")
+        return redirect(url_for("test.scenario_question", idx=idx))
+
+    lang = session.get("lang", "EN").upper()
+    q = get_scenario_by_qid(lang, qid_int)
+    options = q.get("options", []) if q else []
+
+    chosen_opt = None
+    chosen_idx = -1
+    for i, o in enumerate(options):
+        try:
+            if int(o.get("optionID", 0)) == oid_int:
+                chosen_opt = o
+                chosen_idx = i
+                break
+        except Exception:
+            continue
+
+    if not chosen_opt:
+        flash(t_py("scenario_choose_one"), "error")
+        return redirect(url_for("test.scenario_question", idx=idx))
+
+    option_key = (chosen_opt.get("optionKey") or "").strip().upper()
+    if option_key not in ("A", "B", "C", "D"):
+        option_key = option_letter_from_index(chosen_idx)
+
     answers = session.get("scenario_answers") or {}
-    answers[str(qid)] = int(oid)
+    answers[str(qid_int)] = {
+        "optionID": oid_int,
+        "optionKey": option_key,
+        "EIScore": int(chosen_opt.get("EIScore", 0) or 0),
+        "SNScore": int(chosen_opt.get("SNScore", 0) or 0),
+        "TFScore": int(chosen_opt.get("TFScore", 0) or 0),
+        "JPScore": int(chosen_opt.get("JPScore", 0) or 0),
+    }
+
     session["scenario_answers"] = answers
     session["scenario_idx"] = idx
     session.modified = True
@@ -317,57 +464,27 @@ def scenario_preview():
     if not qids:
         return redirect(url_for("test.scenario_start"))
 
-    qs_all = {int(q["questionID"]): dict(q) for q in list_scenario_questions(lang=lang)}
+    qmap = {int(q["questionID"]): q for q in get_scenario_bank(lang)}
+    preview_items = []
 
-    snapshot = []
-    for qid in qids:
+    for idx, qid in enumerate(qids):
         qid = int(qid)
-        q = qs_all.get(qid)
+        q = qmap.get(qid)
         if not q:
             continue
 
-        opts = [dict(o) for o in list_options_for_question(qid, lang)]
-        for o in opts:
-            o["optionID"] = int(o["optionID"])
-            o["questionID"] = int(o.get("questionID", qid))
-            o["optionText"] = (o.get("optionText") or "").strip()
-            o["optionKey"] = (o.get("optionKey") or "").strip().upper()
-            o["EIScore"] = int(o.get("EIScore", 0))
-            o["SNScore"] = int(o.get("SNScore", 0))
-            o["TFScore"] = int(o.get("TFScore", 0))
-            o["JPScore"] = int(o.get("JPScore", 0))
+        saved = answers.get(str(qid))
+        if not saved:
+            flash(t_py("scenario_need_complete"), "warning")
+            return redirect(url_for("test.scenario_question", idx=idx))
 
-        snapshot.append({
-            "questionID": qid,
-            "groupID": int(q.get("groupID") or qid),
-            "scenarioText": q.get("scenarioText", ""),
-            "category": q.get("categoryName") or q.get("category") or "",
-            "options": opts
-        })
-
-    if len(answers) < len(snapshot):
-        flash(t_py("scenario_need_complete"), "warning")
-        for i, q in enumerate(snapshot):
-            if str(q["questionID"]) not in answers:
-                return redirect(url_for("test.scenario_question", idx=i))
-        return redirect(url_for("test.scenario_question", idx=0))
-
-    preview_items = []
-
-    for idx, q in enumerate(snapshot):
-        qid = int(q["questionID"])
-        oid = answers.get(str(qid))
-        if oid is None:
-            continue
-
-        oid = int(oid)
+        chosen_oid = int(saved.get("optionID", 0))
+        letter = saved.get("optionKey", "?")
         opt_text = ""
-        letter = "?"
 
-        for j, o in enumerate(q["options"]):
-            if int(o["optionID"]) == oid:
+        for o in q.get("options", []):
+            if int(o["optionID"]) == chosen_oid:
                 opt_text = o["optionText"]
-                letter = ["A", "B", "C", "D"][j] if 0 <= j <= 3 else "?"
                 break
 
         preview_items.append({
@@ -378,21 +495,6 @@ def scenario_preview():
             "editUrl": url_for("test.scenario_question", idx=idx, return_to_review=1)
         })
 
-    user_id = session["user_id"]
-    profile_context = build_profile_context_for_prediction(user_id)
-
-    top3, raw_payload = predict_top3_from_snapshot(
-        snapshot,
-        answers,
-        profile_context=profile_context
-    )
-
-    store_pending_prediction(
-        top3,
-        raw_payload=raw_payload,
-        profile_context=profile_context
-    )
-
     return render_template("scenario_preview.html", items=preview_items)
 
 
@@ -402,4 +504,47 @@ def scenario_preview():
 @test_bp.post("/scenario/confirm")
 @login_required
 def scenario_confirm():
+    t0 = time.perf_counter()
+
+    lang = session.get("lang", "EN").upper()
+    qids = session.get("scenario_qids") or []
+    answers = session.get("scenario_answers") or {}
+
+    if not qids:
+        return redirect(url_for("test.scenario_start"))
+
+    if len(answers) < len(qids):
+        flash(t_py("scenario_need_complete"), "warning")
+        return redirect(url_for("test.scenario_preview"))
+
+    t1 = time.perf_counter()
+    snapshot = get_snapshot_from_qids(lang, qids)
+    print(f"[TIMING] snapshot: {time.perf_counter() - t1:.4f}s", flush=True)
+
+    user_id = session["user_id"]
+
+    t2 = time.perf_counter()
+    profile_context = build_profile_context_for_prediction(user_id)
+    print(f"[TIMING] profile_context: {time.perf_counter() - t2:.4f}s", flush=True)
+
+    print("[TIMING] before predict_top3_from_snapshot", flush=True)
+    t3 = time.perf_counter()
+    top3, raw_payload = predict_top3_from_snapshot(
+        snapshot=snapshot,
+        answers=answers,
+        profile_context=profile_context
+    )
+    print(f"[TIMING] predict_top3: {time.perf_counter() - t3:.4f}s", flush=True)
+
+    print("[TIMING] before store_pending_prediction", flush=True)
+    t4 = time.perf_counter()
+    store_pending_prediction(
+        top3,
+        raw_payload=raw_payload,
+        profile_context=profile_context
+    )
+    print(f"[TIMING] store_pending_prediction: {time.perf_counter() - t4:.4f}s", flush=True)
+
+    print(f"[TIMING] scenario_confirm total: {time.perf_counter() - t0:.4f}s", flush=True)
+
     return redirect(url_for("result.result_page"))
