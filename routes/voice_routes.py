@@ -188,7 +188,7 @@ def voice_submit():
         flash(voice_msg(session, "supported_lang_only"), "error")
         return redirect(url_for("test.test"))
 
-    is_valid, reason_code, _message = validate_voice_personality_content(final_text)
+    is_valid, reason_code = validate_voice_personality_content(final_text)
     if not is_valid:
         flash(voice_msg(session, reason_code), "error")
         return redirect(url_for("test.test"))
@@ -241,7 +241,7 @@ def submit_voice():
             flash(t_py("msg_voice_empty"), "error")
             return redirect(url_for("test.test"))
 
-        is_valid, reason_code, _message = validate_voice_personality_content(final_text)
+        is_valid, reason_code = validate_voice_personality_content(final_text)
         if not is_valid:
             flash(voice_msg(session, reason_code), "error")
             return redirect(url_for("test.test"))
