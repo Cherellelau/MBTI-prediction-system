@@ -164,11 +164,20 @@ def store_pending_prediction(top3, raw_text: str = "", raw_payload: dict | None 
     if raw_text:
         payload["raw_text"] = raw_text.strip()
 
+    # keep raw_payload only if really needed
     if raw_payload is not None:
-        payload["raw_payload"] = raw_payload
+        payload["raw_payload"] = {
+            "kind": raw_payload.get("kind", ""),
+            "answers": raw_payload.get("answers", []),
+            "scores": raw_payload.get("scores", {}),
+        }
 
+    # keep profile_context minimal
     if profile_context is not None:
-        payload["profile_context"] = profile_context
+        payload["profile_context"] = {
+            "profileCompleted": int(profile_context.get("profileCompleted", 0) or 0),
+            "preferredLanguage": profile_context.get("preferredLanguage", "EN"),
+        }
 
     session["pending_pred"] = payload
     session.modified = True
