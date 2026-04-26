@@ -7,9 +7,63 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(os.path.dirname(__file__), "mbti.db")
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+def ensure_indexes(conn):
+    cur = conn.cursor()
+
+    # Scenario
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sq_language_group
+        ON Scenario_Question(language, groupID)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_sq_group_language
+        ON Scenario_Question(groupID, language)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_so_question_optionkey
+        ON Scenario_Option(questionID, optionKey)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_so_question
+        ON Scenario_Option(questionID)
+    """)
+
+    # User / Profile
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_userprofile_userid
+        ON User_Profile(userID)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_user_email
+        ON User(email)
+    """)
+
+    # Result
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_result_user_created
+        ON MBTI_Result(userID, createdAt)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_result_mbti
+        ON MBTI_Result(mbtiTypeID)
+    """)
+
+    # Career
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_mbticareer_type_sort
+        ON MBTI_Career(typeCode, sortOrder)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_careertext_key_lang
+        ON Career_Text(careerKey, language)
+    """)
+
+    conn.commit()
 
 def ensure_user_is_admin(conn):
     cur = conn.cursor()
@@ -639,6 +693,7 @@ def init_db():
     migrate_career_text_table(conn)
     ensure_career_text_table(conn)
     ensure_mbti_result_profile_columns(conn)
+    ensure_indexes(conn)
 
     conn.commit()
     conn.close()
@@ -1132,7 +1187,6 @@ def list_results_for_user(user_id: int):
 def list_results_for_user_filtered(user_id: int, start_date: str = None, end_date: str = None):
     """
     start_date/end_date: 'YYYY-MM-DD'
-    依赖 SQLite 的 date(createdAt) 做范围过滤
     """
     conn = get_conn()
     cur = conn.cursor()
@@ -1464,3 +1518,62 @@ def build_context_summary(profile_snapshot: dict) -> str:
         parts.append(f"Career goal: {career_goal}")
 
     return " | ".join(parts)
+
+def list_scenario_questions_with_options(lang: str = "EN"):
+    lang = (lang or "EN").upper()
+    if lang not in ("EN", "ZH", "BM"):
+        lang = "EN"
+
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            q.questionID,
+            q.groupID,
+            q.category,
+            q.scenarioText,
+            q.language,
+            o.optionID,
+            o.optionKey,
+            o.optionText,
+            o.EIScore,
+            o.SNScore,
+            o.TFScore,
+            o.JPScore
+        FROM Scenario_Question q
+        LEFT JOIN Scenario_Option o
+            ON q.questionID = o.questionID
+        WHERE q.language = ?
+          AND q.groupID IS NOT NULL
+        ORDER BY q.groupID ASC, o.optionKey ASC
+    """, (lang,))
+
+    rows = cur.fetchall()
+    conn.close()
+
+    grouped = {}
+    for r in rows:
+        qid = int(r["questionID"])
+        if qid not in grouped:
+            grouped[qid] = {
+                "questionID": qid,
+                "groupID": int(r["groupID"] or qid),
+                "category": r["category"] or "",
+                "scenarioText": r["scenarioText"] or "",
+                "language": r["language"] or lang,
+                "options": []
+            }
+
+        if r["optionID"] is not None:
+            grouped[qid]["options"].append({
+                "optionID": int(r["optionID"]),
+                "optionKey": (r["optionKey"] or "").strip().upper(),
+                "optionText": (r["optionText"] or "").strip(),
+                "EIScore": int(r["EIScore"] or 0),
+                "SNScore": int(r["SNScore"] or 0),
+                "TFScore": int(r["TFScore"] or 0),
+                "JPScore": int(r["JPScore"] or 0),
+            })
+
+    return list(grouped.values())
